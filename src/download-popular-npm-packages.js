@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 
 
 async function getPopularPackagesInNpm(total, offset = 0) {
-    const popularPackagesName = [];
+    let popularPackagesName = [];
     let tempPagePackages;
 
     total = total || 0;
@@ -25,39 +25,45 @@ async function getPopularPackagesInNpm(total, offset = 0) {
         popularPackagesName = popularPackagesName.concat(tempPagePackages);
     }
 
-    return popularPackagesNames;
+    return popularPackagesName;
 }
 
 async function getPopularPackagesInSinglePage(offset) {
-
     const url = `https://www.npmjs.com/browse/depended?offset=${offset}`;
 
-    const response = axios(url).catch((err) => {
-        console.error(err);
-        throw err;
-    });
-    const html = response.data;
-    debugger;
-    const $ = cheerio.load(html)
-    const statsTable = $('.statsTableContainer > tr');
-    const topPremierLeagueScorers = [];
+    const html = await scrapeUrl(url);
 
-    statsTable.each(function () {
-        const rank = $(this).find('.rank > strong').text();
-        const playerName = $(this).find('.playerName > strong').text();
-        const nationality = $(this).find('.playerCountry').text();
-        const goals = $(this).find('.mainStat').text();
+    const packageNameJsPath = '#app > div > div.flex.flex-column.vh-100 > main > div > div._0897331b.mb4.bt.b--black-10 > section > div.w-80 > div.flex.flex-row.items-end.pr3 > a > h3';
+    const packageNameElements = getPackageNameElementsFromHtml(html, packageNameJsPath);
 
-        topPremierLeagueScorers.push({
-            rank,
-            name: playerName,
-            nationality,
-            goals,
-        });
-    });
-
-    console.log(topPremierLeagueScorers);
-
+    return Array.from(packageNameElements).map(getPackageNameFromPackageEl).filter((name) => name);
 }
 
-getPopularPackagesInSinglePage(0);
+async function scrapeUrl(url) {
+    return axios(url)
+        .then((res) => res.data)
+        .catch((err) => {
+            console.error(err);
+            throw err;
+        });
+}
+
+function getPackageNameElementsFromHtml(html, packageNameJsPath) {
+    const $ = scrapePage(html);
+
+    return $(packageNameJsPath);
+}
+
+function scrapePage(html) {
+    return cheerio.load(html);
+}
+
+function getPackageNameFromPackageEl(packageNameEl) {
+    if(!packageNameEl || !packageNameEl.children) {
+        return null;
+    }
+
+    let name = packageNameEl.children.find((child) => child && child.type === 'text' && child.data);
+    return name ? name.data : null;
+}
+
