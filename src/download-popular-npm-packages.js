@@ -8,7 +8,7 @@ const getSizes = require('package-size');
 const request = require("request");
 
 
-const LIBRARIES_IO_API_KEY = '';
+const LIBRARIES_IO_API_KEY = '<insert API Key here>';
 
 function defaultErrorHandling(err) {
     console.error(err);
@@ -70,17 +70,20 @@ function getPackagesNameFromResponse(res) {
     return res.map((packageData) => packageData.name);
 }
 
-async function getPopularPackagesInSinglePage(page = 1) {
+function getLibrariesRequestOptions(page, platform, sortType, perPage) {
+    platform = platform || 'npm';
+    sortType = sortType || 'dependents_count';
+    perPage = perPage || 100;
 
-    const options = {
+    return {
         method: 'GET',
         url: 'https://libraries.io/api/search',
         qs: {
             api_key: LIBRARIES_IO_API_KEY,
-            platforms: 'npm',
-            sort: 'dependents_count',
+            platforms: platform,
+            sort: sortType,
             page: page,
-            per_page: 100
+            per_page: perPage
         },
         headers:
             {
@@ -93,6 +96,11 @@ async function getPopularPackagesInSinglePage(page = 1) {
                 Accept: '*/*',
             }
     };
+}
+
+async function getPopularPackagesInSinglePage(page = 1) {
+
+    const options = getLibrariesRequestOptions(page, 'npm', 'dependents_count', 100);
 
     const res = await requestWithPromise(options)
         .catch(defaultErrorHandling);
