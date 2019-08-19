@@ -1,6 +1,5 @@
-// Get Project environment
-
 // This library add the environment file to the `process.env` object
+// You must have .env file
 require('dotenv').config();
 
 // Npm package sizing
