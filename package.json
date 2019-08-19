@@ -1,7 +1,7 @@
 {
   "name": "download-popular-npm-packages",
   "version": "1.0.0",
-  "description": "",
+  "description": "Download popular NPM packages",
   "main": "src/download-popular-npm-packages.js",
   "scripts": {
     "start": "node src/download-popular-npm-packages.js",
@@ -10,10 +10,14 @@
   "author": "rluvaton",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.0",
-    "cheerio": "^1.0.0-rc.3",
+    "chalk": "^2.4.2",
+    "dotenv": "^8.1.0",
     "package-size": "^2.3.0",
+    "prompts": "^2.2.1",
     "puppeteer": "^1.19.0",
     "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.0.1"
   }
 }

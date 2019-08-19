@@ -1,14 +1,15 @@
-// For Web scraping
-const axios = require('axios');
-const cheerio = require('cheerio');
-
 // Npm package sizing
 const getSizes = require('package-size');
 
 const request = require("request");
 
+// Color the command line output
+const chalk = require('chalk');
 
-const LIBRARIES_IO_API_KEY = '<insert API Key here>';
+// Get input from command line
+const prompts = require('prompts');
+
+const LIBRARIES_IO_API_KEY = '<insert api key here>';
 
 function defaultErrorHandling(err) {
     console.error(err);
@@ -20,17 +21,25 @@ function sleep(ms) {
     });
 }
 
-async function getPopularPackagesInNpm(total, page = 1) {
+
+/**
+ *
+ * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
+ * @return {Promise<Array|*[]>}
+ */
+async function getPopularPackagesInPlatform(options) {
     let popularPackagesName = [];
     let tempPagePackages;
 
-    total = total || 0;
-    page = page || 1;
+    let total = options.totalPackages || 0;
+    let page = options.startingPage || 1;
 
     let packagesLeft = total;
 
+    let needToSleep = total > 6000;
+
     while (packagesLeft > 0) {
-        tempPagePackages = await getPopularPackagesInSinglePage(page).catch(defaultErrorHandling);
+        tempPagePackages = await getPopularPackagesInSinglePage(page, options).catch(defaultErrorHandling);
 
         // I'm doing if and not just `tempPagePackages.slice(0, packagesLeft)`
         // because if we won't need to slice the array eventually than it's 99.6% slower doing it without the if
@@ -41,27 +50,17 @@ async function getPopularPackagesInNpm(total, page = 1) {
 
         popularPackagesName = popularPackagesName.concat(tempPagePackages);
 
-        // Can request only 60 requests/minutes = request every second
-        await sleep(1000).catch(defaultErrorHandling);
+        if (needToSleep) {
+            // Can request only 60 requests/minutes = request every second
+            await sleep(1000).catch(defaultErrorHandling);
+        }
     }
 
     return popularPackagesName;
 }
 
-async function getPopularPackagesInSinglePageScrape(offset) {
-    const url = `https://www.npmjs.com/browse/depended?offset=${offset}`;
-
-    const html = await scrapeUrl(url)
-        .catch(defaultErrorHandling);
-
-    const packageNameJsPath = '#app > div > div.flex.flex-column.vh-100 > main > div > div._0897331b.mb4.bt.b--black-10 > section > div.w-80 > div.flex.flex-row.items-end.pr3 > a > h3';
-    const packageNameElements = getPackageNameElementsFromHtml(html, packageNameJsPath);
-
-    return Array.from(packageNameElements).map(getPackageNameFromPackageEl).filter((name) => name);
-}
-
 function getPackagesNameFromResponse(res) {
-    if(!res) {
+    if (!res) {
         return [];
     }
 
@@ -98,11 +97,17 @@ function getLibrariesRequestOptions(page, platform, sortType, perPage) {
     };
 }
 
-async function getPopularPackagesInSinglePage(page = 1) {
+/**
+ *
+ * @param page
+ * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
+ * @return {Promise<Array>}
+ */
+async function getPopularPackagesInSinglePage(page = 1, options) {
 
-    const options = getLibrariesRequestOptions(page, 'npm', 'dependents_count', 100);
+    const requestOptions = getLibrariesRequestOptions(page, options.platform, options.sortBy, 100);
 
-    const res = await requestWithPromise(options)
+    const res = await requestWithPromise(requestOptions)
         .catch(defaultErrorHandling);
 
     return getPackagesNameFromResponse(res);
@@ -119,55 +124,6 @@ function requestWithPromise(options, getBody = true) {
             resolve(getBody ? body : response);
         });
     });
-}
-
-async function scrapeUrl(url) {
-    return axios(url, {
-            headers: {
-                'cache-control': 'no-cache',
-                Connection: 'keep-alive',
-                Host: 'www.npmjs.com',
-                'Postman-Token': '7165165a-db4b-4093-a73d-8d47a8be068d,fd90479c-483e-4aeb-bfa5-f3357c391693',
-                'Cache-Control': 'no-cache',
-                'manifest-hash': '1fbe3c7bd6f7515a64ca',
-                'sec-fetch-site': 'same-origin',
-                'x-requested-with': 'XMLHttpRequest',
-                authority: 'www.npmjs.com',
-                referer: url,
-                accept: '*/*',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36',
-                'accept-language': 'en-US,en;q=0.9,he;q=0.8',
-                'x-spiferack': '1',
-                'accept-encoding': 'gzip',
-                cookie: '_ga=GA1.2.2109964404.1521382342; optimizelyEndUserId=oeu1521382341900r0.7978010614615352; optimizelySegments=^%^7B^%^7D; optimizelyBuckets=^%^7B^%^7D; ConstructorioID_client_id=7dd238b3-2100-4896-9351-352cc398278d; constructorio_t=djF8fDdkZDIzOGIzLTIxMDAtNDg5Ni05MzUxLTM1MmNjMzk4Mjc4ZA==; hubspotutk=b9f4ab03988d888db62710cd49b4436d; __hs_opt_out=no; wub=Fe26.2**7a47df5aeb1092f4ac19478f599f117dbe7d6bb3df84130e01f0f8ebd5dac135*7EOKd5QpP2cDuXoADCLwBQ*zxTBzxTfeEI1ros58aBRBR7wH4BgEl3L5p8HnbzzRhH3SIQ4uZp02z3qitJrSg0D43XwYrYvH2ralyfA_AMERszuCo-UscRKa0vjEUyrSg6E9yPM5DF21FFnbth6wgX-nVjxTT7QPqGjl8HP7pZJiA**06a6c05912c0d246acbd6e5d2ea80e1d52d627019c054272cc6edc1edf969781*x3SCWALVP_mxniZ-MKaHInKKRTlLrLrbQNMtR6mYCyI; __cfduid=d7653375bfeb0e4d09a322e1c6f47c21c1556046568; _gcl_au=1.1.1190553863.1563867155; _gid=GA1.2.1316677122.1566111102; __hssrc=1; __hstc=72727564.b9f4ab03988d888db62710cd49b4436d.1550733423649.1566111102019.1566124009859.66; cs=4cG7WYSszq9T45p0vp5hNdmjpgMvioBzTF2xg2yzJ9u; _gat=1; __hssc=72727564.25.1566124009859,_ga=GA1.2.2109964404.1521382342; optimizelyEndUserId=oeu1521382341900r0.7978010614615352; optimizelySegments=^%^7B^%^7D; optimizelyBuckets=^%^7B^%^7D; ConstructorioID_client_id=7dd238b3-2100-4896-9351-352cc398278d; constructorio_t=djF8fDdkZDIzOGIzLTIxMDAtNDg5Ni05MzUxLTM1MmNjMzk4Mjc4ZA==; hubspotutk=b9f4ab03988d888db62710cd49b4436d; __hs_opt_out=no; wub=Fe26.2**7a47df5aeb1092f4ac19478f599f117dbe7d6bb3df84130e01f0f8ebd5dac135*7EOKd5QpP2cDuXoADCLwBQ*zxTBzxTfeEI1ros58aBRBR7wH4BgEl3L5p8HnbzzRhH3SIQ4uZp02z3qitJrSg0D43XwYrYvH2ralyfA_AMERszuCo-UscRKa0vjEUyrSg6E9yPM5DF21FFnbth6wgX-nVjxTT7QPqGjl8HP7pZJiA**06a6c05912c0d246acbd6e5d2ea80e1d52d627019c054272cc6edc1edf969781*x3SCWALVP_mxniZ-MKaHInKKRTlLrLrbQNMtR6mYCyI; __cfduid=d7653375bfeb0e4d09a322e1c6f47c21c1556046568; _gcl_au=1.1.1190553863.1563867155; _gid=GA1.2.1316677122.1566111102; __hssrc=1; __hstc=72727564.b9f4ab03988d888db62710cd49b4436d.1550733423649.1566111102019.1566124009859.66; cs=4cG7WYSszq9T45p0vp5hNdmjpgMvioBzTF2xg2yzJ9u; _gat=1; __hssc=72727564.25.1566124009859; __cfduid=df4d0a606bfcc7f70a0d5f346659b261e1566113232',
-                'sec-fetch-mode': 'cors'
-            }
-        }
-    )
-        .then((res) => res.data)
-        .catch((err) => {
-            defaultErrorHandling(err);
-            throw err;
-        });
-}
-
-function getPackageNameElementsFromHtml(html, packageNameJsPath) {
-    const $ = scrapePage(html);
-
-    return $(packageNameJsPath);
-}
-
-function scrapePage(html) {
-    return cheerio.load(html);
-}
-
-function getPackageNameFromPackageEl(packageNameEl) {
-    if (!packageNameEl || !packageNameEl.children) {
-        return null;
-    }
-
-    let name = packageNameEl.children.find((child) => child && child.type === 'text' && child.data);
-    return name ? name.data : null;
 }
 
 function createScriptForDownload(packagesName) {
@@ -235,10 +191,112 @@ async function printPackagesSize(names) {
     return names;
 }
 
-getPopularPackagesInNpm(500, 0)
-    // .then(printPackagesSize)
-    .then(createScriptForDownload)
-    .then(handleDownloadScript)
-    .catch(console.error);
+const questions = [
+    {
+        type: 'number',
+        name: 'totalPackages',
+        message: 'How many packages do you want?',
+        initial: 100,
+        min: 1
+    },
+    {
+        type: 'number',
+        name: 'startingPage',
+        message: 'From which page do you wanna start? (default is 1)',
+        initial: 1,
+        min: 1
+    },
+    {
+        type: 'confirm',
+        name: 'advanceOptions',
+        message: 'Enter advance options?',
+        initial: false
+    },
+    {
+        type: (prev) => prev ? 'select' : null,
+        name: 'platform',
+        message: 'Choose platform',
+        choices: [
+            {title: 'npm', value: 'npm'},
+            {title: 'Go', value: 'Go'},
+            {title: 'Packagist', value: 'Packagist'},
+            {title: 'PyPI', value: 'PyPI'},
+            {title: 'Maven', value: 'Maven'},
+            {title: 'NuGet', value: 'NuGet'},
+            {title: 'Rubygems', value: 'Rubygems'},
+            {title: 'Bower', value: 'Bower'},
+            {title: 'WordPress', value: 'WordPress'},
+            {title: 'CocoaPods', value: 'CocoaPods'},
+            {title: 'CPAN', value: 'CPAN'},
+            {title: 'Cargo', value: 'Cargo'},
+            {title: 'Clojars', value: 'Clojars'},
+            {title: 'CRAN', value: 'CRAN'},
+            {title: 'Hackage', value: 'Hackage'},
+            {title: 'Meteor', value: 'Meteor'},
+            {title: 'Atom', value: 'Atom'},
+            {title: 'Hex', value: 'Hex'},
+            {title: 'Pub', value: 'Pub'},
+            {title: 'PlatformIO', value: 'PlatformIO'},
+            {title: 'Puppet', value: 'Puppet'},
+            {title: 'Emacs', value: 'Emacs'},
+            {title: 'Homebrew', value: 'Homebrew'},
+            {title: 'SwiftPM', value: 'SwiftPM'},
+            {title: 'Carthage', value: 'Carthage'},
+            {title: 'Julia', value: 'Julia'},
+            {title: 'Sublime', value: 'Sublime'},
+            {title: 'Dub', value: 'Dub'},
+            {title: 'Racket', value: 'Racket'},
+            {title: 'Elm', value: 'Elm'},
+            {title: 'Haxelib', value: 'Haxelib'},
+            {title: 'Nimble', value: 'Nimble'},
+            {title: 'Alcatraz', value: 'Alcatraz'},
+            {title: 'PureScript', value: 'PureScript'},
+            {title: 'Inqlude', value: 'Inqlude'}
+        ],
+        initial: 0,
+    },
+    {
+        type: (prev) => prev ? 'select' : null,
+        name: 'sortBy',
+        message: 'Choose what is the sort parameter',
+        choices: [
+            {title: 'Rank', value: 'rank'},
+            {title: 'Stars', value: 'stars'},
+            {title: 'Dependents Count', value: 'dependents_count'},
+            {title: 'Dependent Repos Count', value: 'dependent_repos_count'},
+            {title: 'Latest Release Published At', value: 'latest_release_published_at'},
+            {title: 'Contributions Count', value: 'contributions_count'},
+            {title: 'Created At', value: 'created_at'}
+        ],
+        initial: 2,
+    }
+];
 
-// TODO - npm set registry verdsio
+function setDefaultAdvanceOptions(options) {
+    options.platform = 'npm';
+    options.sortBy = 'dependents_count'
+}
+
+(async () => {
+    const options = await prompts(questions).catch(defaultErrorHandling);
+
+    if (!options) {
+        throw {message: 'Can\'t continue'};
+    }
+
+    if(!options.advanceOptions) {
+        setDefaultAdvanceOptions(options);
+    }
+
+    getPopularPackagesInPlatform(options)
+    // .then(printPackagesSize)
+        .then(createScriptForDownload)
+        .then(handleDownloadScript)
+        .catch(console.error);
+
+})();
+
+
+
+
+
