@@ -12,6 +12,45 @@ const prompts = require('prompts');
 
 const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
 
+const platformsInstallScript = {
+    'npm': (packages) => `npm install ${packages.join(' ')}`,
+    'Go': (packages) => `go get ${packages.join(' ')}`,
+    'Packagist': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'PyPI': (packages) => `pip install ${packages.join(' ')}`,
+    'Maven': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'NuGet': (packages) => packages.map((pck) => `Install-Package ${pck}`).join('\n'),
+    'Rubygems': (packages) => `gem install ${packages.join(' ')}`,
+    'Bower': (packages) => `bower install ${packages.join(' ')}`,
+    'WordPress': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'CocoaPods': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'CPAN': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Cargo': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Clojars': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'CRAN': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Hackage': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Meteor': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Atom': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Hex': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Pub': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'PlatformIO': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Puppet': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Emacs': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Homebrew': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'SwiftPM': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Carthage': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Julia': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Sublime': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Dub': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Racket': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Elm': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Haxelib': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Nimble': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Alcatraz': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'PureScript': (packages) => `Not Supported\n${packages.join(' ')}`,
+    'Inqlude': (packages) => `Not Supported\n${packages.join(' ')}`
+};
+
+
 function defaultErrorHandling(err) {
     console.error(err);
 }
@@ -21,6 +60,9 @@ function sleep(ms) {
         setTimeout(resolve, ms);
     });
 }
+
+
+let selectedPlatform;
 
 
 /**
@@ -130,7 +172,7 @@ function requestWithPromise(options, getBody = true) {
 }
 
 function createScriptForDownload(packagesName) {
-    return `npm install ${packagesName.join(' ')}`
+    return platformsInstallScript[selectedPlatform](packagesName)
 }
 
 function handleDownloadScript(script) {
@@ -280,6 +322,7 @@ const questions = [
     }
 ];
 
+
 async function getUserOptions() {
     return prompts(questions);
 }
@@ -291,9 +334,11 @@ async function getUserOptions() {
         throw {message: 'Can\'t continue no options for some reason...'};
     }
 
-    if(!options.advanceOptions) {
+    if (!options.advanceOptions) {
         setDefaultAdvanceOptions(options);
     }
+
+    selectedPlatform = options.platform;
 
     console.log('Starting...');
 

@@ -1,10 +1,10 @@
 {
-  "name": "download-popular-npm-packages",
+  "name": "download-popular-packages-in-some-platform",
   "version": "1.0.0",
-  "description": "Download popular NPM packages",
-  "main": "src/download-popular-npm-packages.js",
+  "description": "Download popular packages in some platform",
+  "main": "src/download-popular-packages.js",
   "scripts": {
-    "start": "node src/download-popular-npm-packages.js",
+    "start": "node src/download-popular-packages.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "rluvaton",
