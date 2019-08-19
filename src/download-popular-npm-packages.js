@@ -38,6 +38,8 @@ async function getPopularPackagesInPlatform(options) {
 
     let packagesLeft = total;
 
+    // Check if we can finish the packages request without requesting more requests than the rate limit (60 requests/minutes)
+    // Then we won't need to sleep each request
     let needToSleep = total > 6000;
 
     while (packagesLeft > 0) {
@@ -52,7 +54,7 @@ async function getPopularPackagesInPlatform(options) {
 
         popularPackagesName = popularPackagesName.concat(tempPagePackages);
 
-        if (needToSleep) {
+        if (needToSleep && packagesLeft <= 0) {
             // Can request only 60 requests/minutes = request every second
             await sleep(1000).catch(defaultErrorHandling);
         }
@@ -303,8 +305,3 @@ async function getUserOptions() {
         .catch(console.error);
 
 })();
-
-
-
-
-
