@@ -1,15 +1,17 @@
+// Get Project environment
+
+// This library add the environment file to the `process.env` object
+require('dotenv').config();
+
 // Npm package sizing
 const getSizes = require('package-size');
 
 const request = require("request");
 
-// Color the command line output
-const chalk = require('chalk');
-
-// Get input from command line
+// Get input from user
 const prompts = require('prompts');
 
-const LIBRARIES_IO_API_KEY = '<insert api key here>';
+const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
 
 function defaultErrorHandling(err) {
     console.error(err);
@@ -191,6 +193,11 @@ async function printPackagesSize(names) {
     return names;
 }
 
+function setDefaultAdvanceOptions(options) {
+    options.platform = 'npm';
+    options.sortBy = 'dependents_count'
+}
+
 const questions = [
     {
         type: 'number',
@@ -272,21 +279,22 @@ const questions = [
     }
 ];
 
-function setDefaultAdvanceOptions(options) {
-    options.platform = 'npm';
-    options.sortBy = 'dependents_count'
+async function getUserOptions() {
+    return prompts(questions);
 }
 
 (async () => {
-    const options = await prompts(questions).catch(defaultErrorHandling);
+    const options = await getUserOptions().catch(defaultErrorHandling);
 
     if (!options) {
-        throw {message: 'Can\'t continue'};
+        throw {message: 'Can\'t continue no options for some reason...'};
     }
 
     if(!options.advanceOptions) {
         setDefaultAdvanceOptions(options);
     }
+
+    console.log('Starting...');
 
     getPopularPackagesInPlatform(options)
     // .then(printPackagesSize)
