@@ -11,15 +11,14 @@ const Utils = require('./utils');
  */
 
 /**
- * @typedef SortOptions
- * @property {string} rank - By package rank
- * @property {string} stars - By package stars
- * @property {string} dependents_count - By package Dependents Count
- * @property {string} dependent_repos_count - By the count of dependent repos that depended on the package
- * @property {string} latest_release_published_at - By package latest release date
- * @property {string} contributions_count - By the count of contributions to this package package
- * @property {string} created_at - By package creation date
- *
+ * @typedef {'rank'|'stars'|'dependents_count'|'dependent_repos_count'|'latest_release_published_at'|'contributions_count'|'created_at'} SortOptions
+ * `rank` - By package rank
+ * `stars` - By package stars
+ * `dependents_count` - By package Dependents Count
+ * `dependent_repos_count` - By the count of dependent repos that depended on the package
+ * `latest_release_published_at` - By package latest release date
+ * `contributions_count` - By the count of contributions to this package package
+ * `created_at` - By package creation date
  */
 
 /**

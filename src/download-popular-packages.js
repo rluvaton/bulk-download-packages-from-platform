@@ -11,11 +11,6 @@ const prompts = require('prompts');
 const Utils = require('./utils');
 const LibrariesAPIHandler = require('./libraries-api-handler');
 
-const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
-LibrariesIoApiHandler = new LibrariesAPIHandler({
-    apiKey: LIBRARIES_IO_API_KEY
-});
-
 let selectedPlatform;
 
 function handleDownloadScript(script) {
@@ -65,11 +60,18 @@ async function printPackagesSize(packages) {
     return packages;
 }
 
-function setDefaultAdvanceOptions(options) {
+/**
+ * Set the advance options as default values
+ * @param {GetPackagesInPlatformOptions} options
+ */
+function setAdvanceOptionsAsDefault(options) {
     options.platform = 'npm';
-    options.sortBy = 'dependents_count'
+    options.sortBy = 'dependents_count';
 }
 
+/**
+ * Configuration questions
+ */
 const questions = [
     {
         type: 'number',
@@ -151,11 +153,21 @@ const questions = [
     }
 ];
 
+/**
+ * Get user options
+ * @return {Promise<prompts.Answers<string>|GetPackagesInPlatformOptions>}
+ */
 async function getUserOptions() {
     return prompts(questions);
 }
 
 (async () => {
+
+    const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
+    const LibrariesIoApiHandler = new LibrariesAPIHandler({
+        apiKey: LIBRARIES_IO_API_KEY
+    });
+
     const options = await getUserOptions().catch(Utils.defaultErrorHandling);
 
     if (!options) {
@@ -163,7 +175,7 @@ async function getUserOptions() {
     }
 
     if (!options.advanceOptions) {
-        setDefaultAdvanceOptions(options);
+        setAdvanceOptionsAsDefault(options);
     }
 
     selectedPlatform = options.platform;
