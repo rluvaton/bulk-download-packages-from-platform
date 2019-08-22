@@ -1,9 +1,56 @@
 const Utils = require('./utils');
 
+// region Declaring Typing for JSDoc
+
+/**
+ * @typedef {Object} Package
+ * @property {string} name - Package name (i.e react)
+ * @property {string} platform - Platform that the package was taken from (i.e NPM)
+ * @property {string} latestStableReleaseNumber - (i.e 1.5.1)
+ * @property {number} latestStableReleasePublishTimestamp - The timestamp in UTC & milliseconds format that the version was published
+ */
+
+/**
+ * @typedef SortOptions
+ * @property {string} rank - By package rank
+ * @property {string} stars - By package stars
+ * @property {string} dependents_count - By package Dependents Count
+ * @property {string} dependent_repos_count - By the count of dependent repos that depended on the package
+ * @property {string} latest_release_published_at - By package latest release date
+ * @property {string} contributions_count - By the count of contributions to this package package
+ * @property {string} created_at - By package creation date
+ *
+ */
+
+/**
+ * @typedef {Object} GetPackagesInPlatformOptions
+ * @property {string} platform - Platform to get packages from (i.e NPM)
+ * @property {number} totalPackages - Total packages to get
+ * @property {number} startingPage - The packages fetch work with pagination (all the packages divided to "pages" for decrease send time)
+ * @property {SortOptions} sortBy - On what criteria to sort by
+ */
+
+/**
+* @typedef {Object} LibrariesAPIHandlerOptions
+* @property {string} apiKey - Libraries API key
+*/
+
+// endregion
+
+/**
+ * Download script for unsupported platforms
+ * @param {Array<Package>|Package[]} packages
+ * @return {string} The default script for unsupported platforms
+ * @private
+ */
 function _downloadScriptForUnsupportedPlatforms(packages) {
     return `Not Supported\n${packages.map(p => p.name).join(' ')}`
 }
 
+/**
+ * Functions that produce the installation script based on the platform (the key)
+ * @type {{[string]: function(Array<Package>|Package[]): string}}
+ */
 const platformsInstallScript = {
     'npm': (packages) => `npm install ${packages.map((p) => `${p.name}@${p.latestStableReleaseNumber}`).join(' ')}`,
     'Go': (packages) => `go get ${packages.map(p => p.name).join(' ')}`,
@@ -44,6 +91,11 @@ const platformsInstallScript = {
     'Carthage': _downloadScriptForUnsupportedPlatforms,
 };
 
+/**
+ * create `LibrariesAPIHandler` instance
+ * @param {LibrariesAPIHandlerOptions} options
+ * @constructor
+ */
 function LibrariesAPIHandler(options) {
     this._validateOptions(options);
 
@@ -52,6 +104,11 @@ function LibrariesAPIHandler(options) {
 
 LibrariesAPIHandler.prototype = {};
 
+/**
+ * Validate the options that passed in the LibrariesAPIHandler constructor
+ * @param {LibrariesAPIHandlerOptions} options
+ * @private
+ */
 LibrariesAPIHandler.prototype._validateOptions = function (options) {
     if (!options) {
         throw {
@@ -67,9 +124,9 @@ LibrariesAPIHandler.prototype._validateOptions = function (options) {
 };
 
 /**
- *
- * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
- * @return {Promise<Array|*[]>}
+ * Get packages in platform
+ * @param {GetPackagesInPlatformOptions} options Options like in which platform to take from how many packages and more
+ * @return {Promise<Array<Package>|Package[]>}
  */
 LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
     let popularPackagesName = [];
@@ -106,10 +163,10 @@ LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
 };
 
 /**
- *
- * @param page
- * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
- * @return {Promise<Array>}
+ * Get packages in specified page
+ * @param {number} page Page to fetch packages from
+ * @param {GetPackagesInPlatformOptions} options
+ * @return {Promise<Array>} Packages of the wanted page
  */
 LibrariesAPIHandler.prototype._getPackagesInSinglePage = async function (page = 1, options) {
 
@@ -118,9 +175,18 @@ LibrariesAPIHandler.prototype._getPackagesInSinglePage = async function (page = 
     const res = await Utils.requestWithPromise(requestOptions)
         .catch(Utils.defaultErrorHandling);
 
-    return this._getPackagesNameFromResponse(res);
+    return this._parsePackagesFromResponse(res);
 };
 
+/**
+ * Get the request options (for request library)
+ * @param {number} page Page to fetch
+ * @param {string} platform Platform to fetch the packages from (i.e npm)
+ * @param {SortOptions} sortType On what criteria to sort by
+ * @param {number} perPage How much packages per page
+ * @return {Object} Request option
+ * @private
+ */
 LibrariesAPIHandler.prototype._getLibrariesRequestOptions = function (page, platform, sortType, perPage) {
     platform = platform || 'npm';
     sortType = sortType || 'dependents_count';
@@ -149,17 +215,29 @@ LibrariesAPIHandler.prototype._getLibrariesRequestOptions = function (page, plat
     };
 };
 
-LibrariesAPIHandler.prototype._getPackagesNameFromResponse = function (res) {
+/**
+ * Parse the packages in the response from the API
+ * @param res The response from the API
+ * @return {Array<Package>|Package[]} Packages
+ * @private
+ */
+LibrariesAPIHandler.prototype._parsePackagesFromResponse = function (res) {
     if (!res) {
         return [];
     }
 
     res = JSON.parse(res);
 
-    return res.map(this._getPackage);
+    return res.map(this._parsePackage);
 };
 
-LibrariesAPIHandler.prototype._getPackage = function (p) {
+/**
+ * Parse Package
+ * @param {Object} p Package as returned from the API
+ * @return {Package|null} Package data
+ * @private
+ */
+LibrariesAPIHandler.prototype._parsePackage = function (p) {
     if (!p) {
         return null;
     }
@@ -172,10 +250,22 @@ LibrariesAPIHandler.prototype._getPackage = function (p) {
     };
 };
 
-LibrariesAPIHandler.prototype.createScriptForDownloadLibrary = function (selectedPlatform, packagesData) {
+/**
+ * Create script for downloading the libraries that fetched
+ * @param {string} selectedPlatform Platform that the packages data from
+ * @param {Array<Package>|Package[]} packagesData
+ * @return {string} download script
+ */
+LibrariesAPIHandler.prototype.createDownloadLibraryScript = function (selectedPlatform, packagesData) {
     return this._getDownloadScriptForPlatform(selectedPlatform)(packagesData)
 };
 
+/**
+ * Get download libraries script for specific platform
+ * @param {string} platformName The platform name
+ * @return {(function(Array<Package>|Package[]): string)}
+ * @private
+ */
 LibrariesAPIHandler.prototype._getDownloadScriptForPlatform = function (platformName) {
     return platformsInstallScript[platformName] || _downloadScriptForUnsupportedPlatforms;
 };

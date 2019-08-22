@@ -1,6 +1,7 @@
 # Download top NPM packages
 
-For this to work you must have `.env` file look like this
+For this to work you must have `.env` file look like this at same directory as the package json
+
 ```dotenv
 LIBRARIES_IO_API_KEY=<your api key>
 ```

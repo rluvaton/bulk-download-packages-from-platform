@@ -45,8 +45,13 @@ async function getPackageSizeFromNameInBytes(names) {
     };
 }
 
-async function printPackagesSize(names) {
-    const packagesSize = await getPackageSizeFromNameInBytes(names)
+/**
+ * Print Package Size
+ * @param packages Packages
+ * @return {Promise<*>}
+ */
+async function printPackagesSize(packages) {
+    const packagesSize = await getPackageSizeFromNameInBytes(packages.map((p) => p.name))
         .catch((err) => {
             Utils.defaultErrorHandling(err);
             return {};
@@ -57,7 +62,7 @@ async function printPackagesSize(names) {
     const totalPackagesSizeGzipped = Utils.parseBytesToHumanReadable(packagesSize.gzipped);
 
     console.log(`Total Packages size is ${totalPackagesSize} | Minified: ${totalPackagesSizeMinified} | Gzipped: ${totalPackagesSizeGzipped}`);
-    return names;
+    return packages;
 }
 
 function setDefaultAdvanceOptions(options) {
@@ -167,7 +172,7 @@ async function getUserOptions() {
 
     LibrariesIoApiHandler.getPackagesInPlatform(options)
     // .then(printPackagesSize)
-        .then((packages) => LibrariesIoApiHandler.createScriptForDownloadLibrary(selectedPlatform, packages))
+        .then((packages) => LibrariesIoApiHandler.createDownloadLibraryScript(selectedPlatform, packages))
         .then(handleDownloadScript)
         .catch(console.error);
 
