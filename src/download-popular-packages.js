@@ -5,199 +5,23 @@ require('dotenv').config();
 // Npm package sizing
 const getSizes = require('package-size');
 
-const request = require("request");
-
 // Get input from user
 const prompts = require('prompts');
 
+const Utils = require('./utils');
+const LibrariesAPIHandler = require('./libraries-api-handler');
+
 const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
-
-const platformsInstallScript = {
-    'npm': (packages) => `npm install ${packages.join(' ')}`,
-    'Go': (packages) => `go get ${packages.join(' ')}`,
-    'Packagist': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'PyPI': (packages) => `pip install ${packages.join(' ')}`,
-    'Maven': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'NuGet': (packages) => packages.map((pck) => `Install-Package ${pck}`).join('\n'),
-    'Rubygems': (packages) => `gem install ${packages.join(' ')}`,
-    'Bower': (packages) => `bower install ${packages.join(' ')}`,
-    'WordPress': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'CocoaPods': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'CPAN': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Cargo': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Clojars': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'CRAN': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Hackage': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Meteor': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Atom': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Hex': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Pub': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'PlatformIO': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Puppet': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Emacs': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Homebrew': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'SwiftPM': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Carthage': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Julia': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Sublime': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Dub': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Racket': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Elm': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Haxelib': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Nimble': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Alcatraz': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'PureScript': (packages) => `Not Supported\n${packages.join(' ')}`,
-    'Inqlude': (packages) => `Not Supported\n${packages.join(' ')}`
-};
-
-
-function defaultErrorHandling(err) {
-    console.error(err);
-}
-
-function sleep(ms) {
-    return new Promise(resolve => {
-        setTimeout(resolve, ms);
-    });
-}
-
+LibrariesIoApiHandler = new LibrariesAPIHandler({
+    apiKey: LIBRARIES_IO_API_KEY
+});
 
 let selectedPlatform;
-
-
-/**
- *
- * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
- * @return {Promise<Array|*[]>}
- */
-async function getPopularPackagesInPlatform(options) {
-    let popularPackagesName = [];
-    let tempPagePackages;
-
-    let total = options.totalPackages || 0;
-    let page = options.startingPage || 1;
-
-    let packagesLeft = total;
-
-    // Check if we can finish the packages request without requesting more requests than the rate limit (60 requests/minutes)
-    // Then we won't need to sleep each request
-    let needToSleep = total > 6000;
-
-    while (packagesLeft > 0) {
-        tempPagePackages = await getPopularPackagesInSinglePage(page, options).catch(defaultErrorHandling);
-
-        // I'm doing if and not just `tempPagePackages.slice(0, packagesLeft)`
-        // because if we won't need to slice the array eventually than it's 99.6% slower doing it without the if
-        tempPagePackages = (packagesLeft < tempPagePackages.length) ? tempPagePackages.slice(0, packagesLeft) : tempPagePackages;
-
-        packagesLeft -= tempPagePackages.length;
-        page++;
-
-        popularPackagesName = popularPackagesName.concat(tempPagePackages);
-
-        if (needToSleep && packagesLeft <= 0) {
-            // Can request only 60 requests/minutes = request every second
-            await sleep(1000).catch(defaultErrorHandling);
-        }
-    }
-
-    return popularPackagesName;
-}
-
-function getPackagesNameFromResponse(res) {
-    if (!res) {
-        return [];
-    }
-
-    res = JSON.parse(res);
-
-    return res.map((packageData) => packageData.name);
-}
-
-function getLibrariesRequestOptions(page, platform, sortType, perPage) {
-    platform = platform || 'npm';
-    sortType = sortType || 'dependents_count';
-    perPage = perPage || 100;
-
-    return {
-        method: 'GET',
-        url: 'https://libraries.io/api/search',
-        qs: {
-            api_key: LIBRARIES_IO_API_KEY,
-            platforms: platform,
-            sort: sortType,
-            page: page,
-            per_page: perPage
-        },
-        headers:
-            {
-                'cache-control': 'no-cache',
-                Connection: 'keep-alive',
-                'accept-encoding': 'gzip, deflate',
-                cookie: '_libraries_session=ejk2QzhLZjdUNFFHcXdYdU5XTHUvRVlnNEFPaHJzTmlGZ29aQ01vUkJvSU4xR0VXMURxd29WaWVTMnQ0ZUVWNmI5bUtVaWJjV1NNYllmWU5JUW5TaXBKUDl1d2dzTGxFVURjYkZubnUzdGlsOFB3OU96cHRIS1pNNnp3dEd3YndzSXI4eVplYm9EdW1tVHk5MFZnbEd3PT0tLXNSeDdMN0pnblQ0M1N1NlNFUTUwM0E9PQ%3D%3D--b0aac01e1ce281f07a5dc1a977f7b7f82cef1dfe',
-                Host: 'libraries.io',
-                'Cache-Control': 'no-cache',
-                Accept: '*/*',
-            }
-    };
-}
-
-/**
- *
- * @param page
- * @param {{platform: string, totalPackages: number, startingPage: number, sortBy: string}} options
- * @return {Promise<Array>}
- */
-async function getPopularPackagesInSinglePage(page = 1, options) {
-
-    const requestOptions = getLibrariesRequestOptions(page, options.platform, options.sortBy, 100);
-
-    const res = await requestWithPromise(requestOptions)
-        .catch(defaultErrorHandling);
-
-    return getPackagesNameFromResponse(res);
-}
-
-function requestWithPromise(options, getBody = true) {
-    return new Promise((resolve, reject) => {
-        request(options, (error, response, body) => {
-            if (error) {
-                reject(error);
-                return;
-            }
-
-            resolve(getBody ? body : response);
-        });
-    });
-}
-
-function createScriptForDownload(packagesName) {
-    return platformsInstallScript[selectedPlatform](packagesName)
-}
 
 function handleDownloadScript(script) {
     console.log('The script is:');
     console.log('--------------');
     console.log(script);
-}
-
-function humanFileSize(bytes, si) {
-    const thresh = si ? 1000 : 1024;
-    if (Math.abs(bytes) < thresh) {
-        return bytes + ' B';
-    }
-
-    const units = si
-        ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
-        : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
-    let u = -1;
-
-    do {
-        bytes /= thresh;
-        ++u;
-    } while (Math.abs(bytes) >= thresh && u < units.length - 1);
-
-    return `${bytes.toFixed(1)} ${units[u]}`;
 }
 
 /**
@@ -210,7 +34,7 @@ async function getPackageSizeFromNameInBytes(names) {
 
     const sizeData = await getSizes(names)
         .catch((err) => {
-            defaultErrorHandling(err);
+            Utils.defaultErrorHandling(err);
             return {};
         });
 
@@ -224,13 +48,13 @@ async function getPackageSizeFromNameInBytes(names) {
 async function printPackagesSize(names) {
     const packagesSize = await getPackageSizeFromNameInBytes(names)
         .catch((err) => {
-            defaultErrorHandling(err);
+            Utils.defaultErrorHandling(err);
             return {};
         });
 
-    const totalPackagesSize = humanFileSize(packagesSize.size);
-    const totalPackagesSizeMinified = humanFileSize(packagesSize.minified);
-    const totalPackagesSizeGzipped = humanFileSize(packagesSize.gzipped);
+    const totalPackagesSize = Utils.parseBytesToHumanReadable(packagesSize.size);
+    const totalPackagesSizeMinified = Utils.parseBytesToHumanReadable(packagesSize.minified);
+    const totalPackagesSizeGzipped = Utils.parseBytesToHumanReadable(packagesSize.gzipped);
 
     console.log(`Total Packages size is ${totalPackagesSize} | Minified: ${totalPackagesSizeMinified} | Gzipped: ${totalPackagesSizeGzipped}`);
     return names;
@@ -322,13 +146,12 @@ const questions = [
     }
 ];
 
-
 async function getUserOptions() {
     return prompts(questions);
 }
 
 (async () => {
-    const options = await getUserOptions().catch(defaultErrorHandling);
+    const options = await getUserOptions().catch(Utils.defaultErrorHandling);
 
     if (!options) {
         throw {message: 'Can\'t continue no options for some reason...'};
@@ -342,9 +165,9 @@ async function getUserOptions() {
 
     console.log('Starting...');
 
-    getPopularPackagesInPlatform(options)
+    LibrariesIoApiHandler.getPackagesInPlatform(options)
     // .then(printPackagesSize)
-        .then(createScriptForDownload)
+        .then((packages) => LibrariesIoApiHandler.createScriptForDownloadLibrary(selectedPlatform, packages))
         .then(handleDownloadScript)
         .catch(console.error);
 
