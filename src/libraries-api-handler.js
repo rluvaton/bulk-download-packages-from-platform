@@ -46,6 +46,7 @@ function _downloadScriptForUnsupportedPlatforms(packages) {
     return `Not Supported\n${packages.map(p => p.name).join(' ')}`
 }
 
+// noinspection JSValidateTypes
 /**
  * Functions that produce the installation script based on the platform (the key)
  * @type {{[string]: function(Array<Package>|Package[]): string}}
@@ -180,7 +181,7 @@ LibrariesAPIHandler.prototype._getPackagesInSinglePage = async function (page = 
 /**
  * Get the request options (for request library)
  * @param {number} page Page to fetch
- * @param {string} platform Platform to fetch the packages from (i.e npm)
+ * @param {Platforms} platform Platform to fetch the packages from (i.e npm)
  * @param {SortOptions} sortType On what criteria to sort by
  * @param {number} perPage How much packages per page
  * @return {Object} Request option
@@ -237,7 +238,7 @@ LibrariesAPIHandler.prototype._parsePackagesFromResponse = function (res) {
 
 /**
  * Parse Package
- * @param {Object} p Package as returned from the API
+ * @param p Package as returned from the API
  * @return {Package|null} Package data
  * @private
  */
@@ -266,7 +267,7 @@ LibrariesAPIHandler.prototype.createDownloadLibraryScript = function (selectedPl
 
 /**
  * Get download libraries script for specific platform
- * @param {string} platformName The platform name
+ * @param {Platforms} platformName The platform name
  * @return {(function(Array<Package>|Package[]): string)}
  * @private
  */

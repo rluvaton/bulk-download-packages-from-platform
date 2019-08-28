@@ -1,5 +1,3 @@
-const utils = require('../utils');
-
 const OptionsFromProgramArgs = require('./options-from-program-args');
 const OptionsFromUserInput = require('./options-from-user-input');
 
