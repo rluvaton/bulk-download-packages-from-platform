@@ -5,15 +5,46 @@ require('dotenv').config();
 // Npm package sizing
 const getSizes = require('package-size');
 
-// Get input from user
-const prompts = require('prompts');
-
 const Utils = require('./utils');
 const LibrariesAPIHandler = require('./libraries-api-handler');
 
-let selectedPlatform;
+const {getUserOptions} = require('./options/user-options-handler');
+const UserOptions = require('./options/user-options');
 
-function handleDownloadScript(script) {
+/**
+ * @type {UserOptions}
+ */
+let options;
+
+/**
+ * Handle download script based on the `options.scriptHandleOptions`
+ * @param {string} script the download script
+ * @return {Promise<void>}
+ */
+async function handleDownloadScript(script) {
+    switch (options.scriptHandleOptions) {
+        case 'file':
+            const successfullyWriteToFile = Utils.writeFile(options.filePath, script)
+                .then(() => true)
+                .catch((err) => {
+                    console.error('Error in writing to file');
+                    Utils.defaultErrorHandling(err);
+
+                    return false;
+                });
+
+            if (successfullyWriteToFile) {
+                break;
+            }
+
+            // Fall through if error in writing to file
+        case 'print':
+            printDownloadScript(script);
+            break;
+    }
+}
+
+function printDownloadScript(script) {
     console.log('The script is:');
     console.log('--------------');
     console.log(script);
@@ -60,132 +91,33 @@ async function printPackagesSize(packages) {
     return packages;
 }
 
-/**
- * Set the advance options as default values
- * @param {GetPackagesInPlatformOptions} options
- */
-function setAdvanceOptionsAsDefault(options) {
-    options.platform = 'npm';
-    options.sortBy = 'dependents_count';
-}
-
-/**
- * Configuration questions
- */
-const questions = [
-    {
-        type: 'number',
-        name: 'totalPackages',
-        message: 'How many packages do you want?',
-        initial: 100,
-        min: 1
-    },
-    {
-        type: 'number',
-        name: 'startingPage',
-        message: 'From which page do you wanna start? (default is 1)',
-        initial: 1,
-        min: 1
-    },
-    {
-        type: 'confirm',
-        name: 'advanceOptions',
-        message: 'Enter advance options?',
-        initial: false
-    },
-    {
-        type: (prev) => prev ? 'select' : null,
-        name: 'platform',
-        message: 'Choose platform',
-        choices: [
-            {title: 'npm', value: 'npm'},
-            {title: 'Go', value: 'Go'},
-            {title: 'Packagist', value: 'Packagist'},
-            {title: 'PyPI', value: 'PyPI'},
-            {title: 'Maven', value: 'Maven'},
-            {title: 'NuGet', value: 'NuGet'},
-            {title: 'Rubygems', value: 'Rubygems'},
-            {title: 'Bower', value: 'Bower'},
-            {title: 'WordPress', value: 'WordPress'},
-            {title: 'CocoaPods', value: 'CocoaPods'},
-            {title: 'CPAN', value: 'CPAN'},
-            {title: 'Cargo', value: 'Cargo'},
-            {title: 'Clojars', value: 'Clojars'},
-            {title: 'CRAN', value: 'CRAN'},
-            {title: 'Hackage', value: 'Hackage'},
-            {title: 'Meteor', value: 'Meteor'},
-            {title: 'Atom', value: 'Atom'},
-            {title: 'Hex', value: 'Hex'},
-            {title: 'Pub', value: 'Pub'},
-            {title: 'PlatformIO', value: 'PlatformIO'},
-            {title: 'Puppet', value: 'Puppet'},
-            {title: 'Emacs', value: 'Emacs'},
-            {title: 'Homebrew', value: 'Homebrew'},
-            {title: 'SwiftPM', value: 'SwiftPM'},
-            {title: 'Carthage', value: 'Carthage'},
-            {title: 'Julia', value: 'Julia'},
-            {title: 'Sublime', value: 'Sublime'},
-            {title: 'Dub', value: 'Dub'},
-            {title: 'Racket', value: 'Racket'},
-            {title: 'Elm', value: 'Elm'},
-            {title: 'Haxelib', value: 'Haxelib'},
-            {title: 'Nimble', value: 'Nimble'},
-            {title: 'Alcatraz', value: 'Alcatraz'},
-            {title: 'PureScript', value: 'PureScript'},
-            {title: 'Inqlude', value: 'Inqlude'}
-        ],
-        initial: 0,
-    },
-    {
-        type: (prev) => prev ? 'select' : null,
-        name: 'sortBy',
-        message: 'Choose what is the sort parameter',
-        choices: [
-            {title: 'Rank', value: 'rank'},
-            {title: 'Stars', value: 'stars'},
-            {title: 'Dependents Count', value: 'dependents_count'},
-            {title: 'Dependent Repos Count', value: 'dependent_repos_count'},
-            {title: 'Latest Release Published At', value: 'latest_release_published_at'},
-            {title: 'Contributions Count', value: 'contributions_count'},
-            {title: 'Created At', value: 'created_at'}
-        ],
-        initial: 2,
-    }
-];
-
-/**
- * Get user options
- * @return {Promise<prompts.Answers<string>|GetPackagesInPlatformOptions>}
- */
-async function getUserOptions() {
-    return prompts(questions);
+function onFinish() {
+    console.log('Finished!');
 }
 
 (async () => {
 
     const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
-    const LibrariesIoApiHandler = new LibrariesAPIHandler({
+    const librariesIoApiHandler = new LibrariesAPIHandler({
         apiKey: LIBRARIES_IO_API_KEY
     });
 
-    const options = await getUserOptions().catch(Utils.defaultErrorHandling);
-
-    if (!options) {
-        throw {message: 'Can\'t continue no options for some reason...'};
-    }
-
-    if (!options.advanceOptions) {
-        setAdvanceOptionsAsDefault(options);
-    }
-
-    selectedPlatform = options.platform;
+    /**
+     * Options
+     * @type {UserOptions}
+     */
+    options = await getUserOptions(process.argv).catch((err) => {
+        Utils.defaultErrorHandling(err);
+        return new UserOptions(null);
+    });
 
     console.log('Starting...');
 
-    LibrariesIoApiHandler.getPackagesInPlatform(options)
+    librariesIoApiHandler.getPackagesInPlatform(options)
     // .then(printPackagesSize)
-        .then((packages) => LibrariesIoApiHandler.createDownloadLibraryScript(selectedPlatform, packages))
+        .then((packages) => librariesIoApiHandler.createDownloadLibraryScript(options.platform, packages))
         .then(handleDownloadScript)
+        .then(onFinish)
         .catch(console.error);
 
 })();
