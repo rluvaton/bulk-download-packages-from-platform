@@ -93,7 +93,7 @@ const OptionsFromUserInput = {
             type: 'number',
             name: UserOptionKeys.STARTING_PAGE,
             message: 'From which page do you wanna start? (default is 1)',
-            initial: false,
+            initial: DefaultUserOptions[UserOptionKeys.STARTING_PAGE],
             min: 1
         },
         {
