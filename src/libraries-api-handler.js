@@ -111,7 +111,7 @@ LibrariesAPIHandler.prototype = {};
 LibrariesAPIHandler.prototype._validateOptions = function (options) {
     if (!options) {
         throw {
-            message: 'Options can\'t be falsy'
+            message: 'UserOptions can\'t be falsy'
         };
     }
 
@@ -124,7 +124,7 @@ LibrariesAPIHandler.prototype._validateOptions = function (options) {
 
 /**
  * Get packages in platform
- * @param {GetPackagesInPlatformOptions} options Options like in which platform to take from how many packages and more
+ * @param {UserOptions} options UserOptions like in which platform to take from how many packages and more
  * @return {Promise<Array<Package>|Package[]>}
  */
 LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
@@ -164,7 +164,7 @@ LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
 /**
  * Get packages in specified page
  * @param {number} page Page to fetch packages from
- * @param {GetPackagesInPlatformOptions} options
+ * @param {UserOptions} options
  * @return {Promise<Array>} Packages of the wanted page
  */
 LibrariesAPIHandler.prototype._getPackagesInSinglePage = async function (page = 1, options) {
@@ -251,7 +251,7 @@ LibrariesAPIHandler.prototype._parsePackage = function (p) {
 
 /**
  * Create script for downloading the libraries that fetched
- * @param {string} selectedPlatform Platform that the packages data from
+ * @param {Platforms} selectedPlatform Platform that the packages data from
  * @param {Array<Package>|Package[]} packagesData
  * @return {string} download script
  */
