@@ -10,39 +10,6 @@ const fs = require("fs");
 const Utils = {
 
     /**
-     * Parse bytes to human readable text
-     * @param {number} bytes
-     * @param {boolean} si SI prefix (i.e si = true is GB | si = false is GiB)
-     * @return {string} The size in readable text
-     *
-     * @example si = true
-     * parseBytesToHumanReadable(32000000, true)
-     * // returns '32.0 MB'
-     *
-     * @example si = false
-     * parseBytesToHumanReadable(32000000, false)
-     * // returns '30.5 MiB'
-     */
-    parseBytesToHumanReadable: function (bytes, si = false) {
-        const thresh = si ? 1000 : 1024;
-        if (Math.abs(bytes) < thresh) {
-            return bytes + ' B';
-        }
-
-        const units = si
-            ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
-            : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
-        let u = -1;
-
-        do {
-            bytes /= thresh;
-            ++u;
-        } while (Math.abs(bytes) >= thresh && u < units.length - 1);
-
-        return `${bytes.toFixed(1)} ${units[u]}`;
-    },
-
-    /**
      * Return promise that resolve after the milliseconds that provided passed
      * @param {number} ms Milliseconds to sleep
      * @return {Promise} Waiting promise
@@ -87,23 +54,6 @@ const Utils = {
      */
     getUTCTimestampFromDateStr: function (date) {
         return moment(date).utc().valueOf()
-    },
-
-    validatePath: function (path) {
-
-        // 1 - if path exist
-        // 1.1 true: if path is file
-        // 1.1.1 true: GOOD
-        // 1.1.1 false: BAD
-        // 1.1 false: if parent folder exist:
-        // 1.1.1 true: GOOD
-        // 1.1.1 false: BAD
-
-        if (isPathExist(path)) {
-            return isPathAFile(path);
-        }
-
-        return isParentFolderExist(path);
     },
 
     /**

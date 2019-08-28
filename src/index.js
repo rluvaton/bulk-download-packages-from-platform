@@ -2,9 +2,6 @@
 // You must have .env file
 require('dotenv').config();
 
-// Npm package sizing
-const getSizes = require('package-size');
-
 const Utils = require('./utils');
 const LibrariesAPIHandler = require('./libraries-api-handler');
 
@@ -50,47 +47,6 @@ function printDownloadScript(script) {
     console.log(script);
 }
 
-/**
- * Get package(s) size from it's name(s)
- * @param names Package(s) name - can be string or array of names
- * @return Package name in bytes
- */
-async function getPackageSizeFromNameInBytes(names) {
-    names = Array.isArray(names) ? names.join(',') : names;
-
-    const sizeData = await getSizes(names)
-        .catch((err) => {
-            Utils.defaultErrorHandling(err);
-            return {};
-        });
-
-    return {
-        size: sizeData.size,
-        minified: sizeData.minified,
-        gzipped: sizeData.gzipped,
-    };
-}
-
-/**
- * Print Package Size
- * @param packages Packages
- * @return {Promise<*>}
- */
-async function printPackagesSize(packages) {
-    const packagesSize = await getPackageSizeFromNameInBytes(packages.map((p) => p.name))
-        .catch((err) => {
-            Utils.defaultErrorHandling(err);
-            return {};
-        });
-
-    const totalPackagesSize = Utils.parseBytesToHumanReadable(packagesSize.size);
-    const totalPackagesSizeMinified = Utils.parseBytesToHumanReadable(packagesSize.minified);
-    const totalPackagesSizeGzipped = Utils.parseBytesToHumanReadable(packagesSize.gzipped);
-
-    console.log(`Total Packages size is ${totalPackagesSize} | Minified: ${totalPackagesSizeMinified} | Gzipped: ${totalPackagesSizeGzipped}`);
-    return packages;
-}
-
 function onFinish() {
     console.log('Finished!');
 }
@@ -102,10 +58,7 @@ function onFinish() {
         apiKey: LIBRARIES_IO_API_KEY
     });
 
-    /**
-     * Options
-     * @type {UserOptions}
-     */
+    // noinspection JSValidateTypes
     options = await getUserOptions(process.argv).catch((err) => {
         console.error('Error in getting user options');
         Utils.defaultErrorHandling(err);
@@ -121,7 +74,6 @@ function onFinish() {
     console.log('Starting...');
 
     librariesIoApiHandler.getPackagesInPlatform(options)
-    // .then(printPackagesSize)
         .then((packages) => librariesIoApiHandler.createDownloadLibraryScript(options.platform, packages))
         .then(handleDownloadScript)
         .then(onFinish)
