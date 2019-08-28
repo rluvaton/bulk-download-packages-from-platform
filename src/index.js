@@ -22,7 +22,7 @@ let options;
  * @return {Promise<void>}
  */
 async function handleDownloadScript(script) {
-    switch (options.scriptHandleOptions) {
+    switch (options.scriptHandleOption) {
         case 'file':
             const successfullyWriteToFile = Utils.writeFile(options.filePath, script)
                 .then(() => true)
@@ -107,9 +107,16 @@ function onFinish() {
      * @type {UserOptions}
      */
     options = await getUserOptions(process.argv).catch((err) => {
+        console.error('Error in getting user options');
         Utils.defaultErrorHandling(err);
-        return new UserOptions(null);
+
+        return null;
     });
+
+    if(!options) {
+        console.error('Exiting, no options due to an error');
+        return;
+    }
 
     console.log('Starting...');
 

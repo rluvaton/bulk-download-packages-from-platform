@@ -1,7 +1,6 @@
 // Get input from user
 const prompts = require('prompts');
-
-const utils = require('../utils');
+const SharedOptionsUtils = require('./shared-options-utils');
 
 const ScriptHandleOptions = require('../common/script-handle-option');
 const SortOptions = require('../common/sort-options');
@@ -68,7 +67,7 @@ const platformChoices = [
  * @return {number} Index of the initial choice
  */
 function getInitialIndexFromChoicesAndName(userOptionKey, choices) {
-    const initialValue = UserOptions[userOptionKey];
+    const initialValue = UserOptions.default[userOptionKey];
     return choices.findIndex((choice) => choice.value === initialValue);
 }
 
@@ -113,18 +112,17 @@ const OptionsFromUserInput = {
             type: (prev) => prev === ScriptHandleOptions.WRITE_TO_FILE ? 'text' : null,
             name: UserOptionKeys.FILE_PATH,
             message: 'Please Enter the file path you want to add',
-            initial: DefaultUserOptions[UserOptionKeys.FILE_PATH],
-            validate: (filePath) => {
-                if (!filePath) {
-                    return false;
+            validate: (path) => {
+                let result;
+                try {
+                    result = SharedOptionsUtils.validateWriteToFilePath(path, true);
+                } catch(error) {
+                    result = error.message;
                 }
 
-                if (utils.isPathExist(filePath)) {
-                    return utils.validatePathType(filePath, true);
-                }
-
-                return utils.isParentFolderExist(path);
-            }
+                return result;
+            },
+            initial: DefaultUserOptions[UserOptionKeys.FILE_PATH]
         },
         {
             type: (prev, values) => values[UserOptionKeys.ADVANCE_OPTIONS] ? 'select' : null,

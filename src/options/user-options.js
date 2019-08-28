@@ -8,7 +8,7 @@ const SortOptions = require('../common/sort-options');
  * @typedef {Object} UserOptions
  * @property {number} totalPackages - Total packages to fetch
  * @property {number} startingPage - From which page to start fetching packages
- * @property {ScriptHandleOptions} scriptHandleOptions - How to handle the script
+ * @property {ScriptHandleOptions} scriptHandleOption - How to handle the script
  * @property {string} filePath - File path in case that `file` is chosen in `scriptHandleOptions` option
  * @property {Platforms} platform - Platform to get the packages from
  * @property {SortOptions} sortBy - at which order to get the packages (i.e get from npm the packages with the top dependents count)
@@ -67,7 +67,7 @@ function UserOptions(options, setEmptyOptionsAsDefault = true) {
      * @type {ScriptHandleOptions}
      * @default ScriptHandleOptions.WRITE_TO_FILE
      */
-    this.scriptHandleOptions = options.scriptHandleOptions;
+    this.scriptHandleOption = options.scriptHandleOption;
 
     /**
      * File path in case that `file` is chosen in `scriptHandleOptions` option
@@ -103,7 +103,7 @@ UserOptions.prototype = {};
 UserOptions.prototype.setEmptyOptionsAsDefault = function () {
     this.totalPackages = this.totalPackages > 0 ? this.totalPackages : defaultOptions[OptionKeys.TOTAL_PACKAGES];
     this.startingPage = this.startingPage > 0 ? this.startingPage : defaultOptions[OptionKeys.STARTING_PAGE];
-    this.scriptHandleOptions = this.scriptHandleOptions || defaultOptions[OptionKeys.SCRIPT_HANDLE_OPTION];
+    this.scriptHandleOption = this.scriptHandleOption || defaultOptions[OptionKeys.SCRIPT_HANDLE_OPTION];
     this.filePath = this.filePath || defaultOptions[OptionKeys.FILE_PATH];
     this.platform = this.platform || defaultOptions[OptionKeys.PLATFORM];
     this.sortBy = this.sortBy || defaultOptions[OptionKeys.SORT_BY];

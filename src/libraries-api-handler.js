@@ -225,8 +225,13 @@ LibrariesAPIHandler.prototype._parsePackagesFromResponse = function (res) {
         return [];
     }
 
-    res = JSON.parse(res);
-
+    try {
+        res = JSON.parse(res);
+    } catch (e) {
+        console.error(res);
+        console.error(e);
+        throw e;
+    }
     return res.map(this._parsePackage);
 };
 
