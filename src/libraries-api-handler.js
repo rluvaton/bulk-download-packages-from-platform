@@ -1,4 +1,4 @@
-const Utils = require('./utils');
+const utils = require('./helpers/utils');
 
 // region Declaring Typing for JSDoc
 
@@ -142,7 +142,7 @@ LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
     let needToSleep = total > 6000;
 
     while (packagesLeft > 0) {
-        tempPagePackages = await this._getPackagesInSinglePage(page, options).catch(Utils.defaultErrorHandling);
+        tempPagePackages = await this._getPackagesInSinglePage(page, options).catch(utils.defaultErrorHandling);
 
         // I'm doing if and not just `tempPagePackages.slice(0, packagesLeft)`
         // because if we won't need to slice the array eventually than it's 99.6% slower doing it without the if
@@ -155,7 +155,7 @@ LibrariesAPIHandler.prototype.getPackagesInPlatform = async function (options) {
 
         if (needToSleep && packagesLeft <= 0) {
             // Can request only 60 requests/minutes = request every second
-            await Utils.sleep(1000).catch(Utils.defaultErrorHandling);
+            await utils.sleep(1000).catch(utils.defaultErrorHandling);
         }
     }
 
@@ -172,8 +172,8 @@ LibrariesAPIHandler.prototype._getPackagesInSinglePage = async function (page = 
 
     const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, 100);
 
-    const res = await Utils.requestWithPromise(requestOptions)
-        .catch(Utils.defaultErrorHandling);
+    const res = await utils.requestWithPromise(requestOptions)
+        .catch(utils.defaultErrorHandling);
 
     return this._parsePackagesFromResponse(res);
 };
@@ -251,7 +251,7 @@ LibrariesAPIHandler.prototype._parsePackage = function (p) {
         name: p.name,
         platform: p.platform,
         latestStableReleaseNumber: p.latest_stable_release_number,
-        latestStableReleasePublishTimestamp: Utils.getUTCTimestampFromDateStr(p.latest_stable_release_published_at)
+        latestStableReleasePublishTimestamp: utils.getUTCTimestampFromDateStr(p.latest_stable_release_published_at)
     };
 };
 

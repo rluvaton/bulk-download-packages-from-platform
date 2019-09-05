@@ -1,7 +1,7 @@
 // Parse command line arguments
 const commandLineArgs = require('command-line-args');
 
-const utils = require('../utils');
+const validateHelper = require('../helpers/validate-helper');
 const SharedOptionsUtils = require('./shared-options-utils');
 const ScriptHandleOptions = require('../common/script-handle-option');
 const SortOptions = require('../common/sort-options');
@@ -72,7 +72,7 @@ const optionDefinitions = [
 
 function validateFilePath(options) {
     return new Promise((resolve) => {
-        if (!utils.isNil(options.filePath) && options.scriptHandleOption === ScriptHandleOptions.WRITE_TO_FILE) {
+        if (!validateHelper.isNil(options.filePath) && options.scriptHandleOption === ScriptHandleOptions.WRITE_TO_FILE) {
             // In case of an error it should call the catch function, if no error it should resolve
             SharedOptionsUtils.validateWriteToFilePath(options.filePath, true);
         }
@@ -85,7 +85,7 @@ function validateFilePath(options) {
 
 function validateTotalPackages(options) {
     return new Promise((resolve, reject) => {
-        if (!utils.isNil(options.totalPackages) && (!utils.isNumber(options.totalPackages) || options.totalPackages <= 0)) {
+        if (!validateHelper.isNil(options.totalPackages) && (!validateHelper.isNumber(options.totalPackages) || options.totalPackages <= 0)) {
             reject({message: 'Invalid total packages', totalPackages: options.totalPackages});
             return;
         }
@@ -96,7 +96,7 @@ function validateTotalPackages(options) {
 
 function validateStartingPage(options) {
     return new Promise((resolve, reject) => {
-        if (!utils.isNil(options.startingPage) && (!utils.isNumber(options.startingPage) || options.startingPage <= 0)) {
+        if (!validateHelper.isNil(options.startingPage) && (!validateHelper.isNumber(options.startingPage) || options.startingPage <= 0)) {
             reject({message: 'Invalid starting page', startingPage: options.startingPage});
             return;
         }
@@ -108,7 +108,7 @@ function validateStartingPage(options) {
 function validateScriptHandleOption(options) {
     return new Promise((resolve, reject) => {
 
-        if (!utils.isNil(options.scriptHandleOption) && !(Object.values(ScriptHandleOptions).includes(options.scriptHandleOption))) {
+        if (!validateHelper.isNil(options.scriptHandleOption) && !(Object.values(ScriptHandleOptions).includes(options.scriptHandleOption))) {
             reject({message: 'Invalid script handle option', scriptHandleOption: options.scriptHandleOption});
             return;
         }
@@ -120,7 +120,7 @@ function validateScriptHandleOption(options) {
 function validatePlatform(options) {
     return new Promise((resolve, reject) => {
 
-        if (!utils.isNil(options.platform) && !(Object.values(Platforms).includes(options.platform))) {
+        if (!validateHelper.isNil(options.platform) && !(Object.values(Platforms).includes(options.platform))) {
             reject({message: 'Invalid platform', platform: options.platform});
             return;
         }
@@ -132,7 +132,7 @@ function validatePlatform(options) {
 function validateSortBy(options) {
     return new Promise((resolve, reject) => {
 
-        if (!utils.isNil(options.sortBy) && !(Object.values(SortOptions).includes(options.sortBy))) {
+        if (!validateHelper.isNil(options.sortBy) && !(Object.values(SortOptions).includes(options.sortBy))) {
             reject({message: 'Invalid sort by', sortBy: options.sortBy});
             return;
         }
@@ -169,7 +169,7 @@ async function validateOptions(options) {
  * Options From Program Args handler
  * @type {OptionsFromProgramArgs}
  */
-const OptionsFromProgramArgs = {
+const optionsFromProgramArgs = {
 
     isArgsContainOptions: (args) => {
         let options;
@@ -197,4 +197,4 @@ const OptionsFromProgramArgs = {
     }
 };
 
-module.exports = OptionsFromProgramArgs;
+module.exports = optionsFromProgramArgs;

@@ -1,4 +1,4 @@
-const utils = require('../utils');
+const fsHelper = require('../helpers/fs-helper');
 
 function handleError(shouldThrow, message) {
     if (shouldThrow) {
@@ -21,15 +21,15 @@ module.exports = {
             return false;
         }
 
-        if (utils.isPathExist(filePath)) {
-            if (!utils.validatePathType(filePath, true)) {
+        if (fsHelper.isPathExist(filePath)) {
+            if (!fsHelper.validatePathType(filePath, true)) {
                 handleError(throwInCaseOfInvalidPath, 'The provided path isn\'t a file path');
                 return false;
             }
             return true;
         }
 
-        if (!utils.isParentFolderExist(filePath)) {
+        if (!fsHelper.isParentFolderExist(filePath)) {
             handleError(throwInCaseOfInvalidPath, `Parent folder of the provided path ("${filePath}") isn't exist`);
             return false;
         }

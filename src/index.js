@@ -2,7 +2,9 @@
 // You must have .env file
 require('dotenv').config();
 
-const Utils = require('./utils');
+const fsHelper = require('./helpers/fs-helper');
+const utils = require('./helpers/utils');
+
 const LibrariesAPIHandler = require('./libraries-api-handler');
 
 const {getUserOptions} = require('./options/user-options-handler');
@@ -21,11 +23,11 @@ let options;
 async function handleDownloadScript(script) {
     switch (options.scriptHandleOption) {
         case 'file':
-            const successfullyWriteToFile = Utils.writeFile(options.filePath, script)
+            const successfullyWriteToFile = fsHelper.writeFile(options.filePath, script)
                 .then(() => true)
                 .catch((err) => {
                     console.error('Error in writing to file');
-                    Utils.defaultErrorHandling(err);
+                    utils.defaultErrorHandling(err);
 
                     return false;
                 });
@@ -61,7 +63,7 @@ function onFinish() {
     // noinspection JSValidateTypes
     options = await getUserOptions(process.argv).catch((err) => {
         console.error('Error in getting user options');
-        Utils.defaultErrorHandling(err);
+        utils.defaultErrorHandling(err);
 
         return null;
     });
