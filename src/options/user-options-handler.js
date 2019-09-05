@@ -1,7 +1,7 @@
-const OptionsFromProgramArgs = require('./options-from-program-args');
-const OptionsFromUserInput = require('./options-from-user-input');
+const optionsFromProgramArgs = require('./options-from-program-args');
+const optionsFromUserInput = require('./options-from-user-input');
 
-const UserOptionsHandler = {
+const userOptionsHandler = {
 
     /**
      * Get user options
@@ -10,8 +10,8 @@ const UserOptionsHandler = {
     getUserOptions: async function (programArgs) {
         let options;
 
-        if(OptionsFromProgramArgs.isArgsContainOptions(programArgs)) {
-            options = await OptionsFromProgramArgs.getUserOptionsFromProgramArgs(programArgs).catch((err) => {
+        if(optionsFromProgramArgs.isArgsContainOptions(programArgs)) {
+            options = await optionsFromProgramArgs.getUserOptionsFromProgramArgs(programArgs).catch((err) => {
                 console.error('Error in getting user options from program args', err);
                 console.log('Fallback to manual setting the options...');
                 return null;
@@ -19,7 +19,7 @@ const UserOptionsHandler = {
         }
 
         if(!options) {
-            options = await OptionsFromUserInput.getOptionsFromInput().catch((err) => {
+            options = await optionsFromUserInput.getOptionsFromInput().catch((err) => {
                 console.error('Error in getting user options from input', err);
                 throw err;
             });
@@ -29,4 +29,4 @@ const UserOptionsHandler = {
     },
 };
 
-module.exports = UserOptionsHandler;
+module.exports = userOptionsHandler;
