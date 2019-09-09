@@ -90,6 +90,13 @@ const optionsFromUserInput = {
         },
         {
             type: 'number',
+            name: UserOptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT,
+            message: 'The amount of characters in single script (Some OS have low limit)',
+            initial: DefaultUserOptions[UserOptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT],
+            min: 100
+        },
+        {
+            type: 'number',
             name: UserOptionKeys.STARTING_PAGE,
             message: 'From which page do you wanna start? (default is 1)',
             initial: DefaultUserOptions[UserOptionKeys.STARTING_PAGE],
@@ -116,7 +123,7 @@ const optionsFromUserInput = {
                 let result;
                 try {
                     result = sharedOptionsUtils.validateWriteToFilePath(path, true);
-                } catch(error) {
+                } catch (error) {
                     result = error.message;
                 }
 

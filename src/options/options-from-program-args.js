@@ -67,6 +67,11 @@ const optionDefinitions = [
         name: UserOptionKeys.SORT_BY,
         type: String,
         defaultValue: DefaultUserOptions.sortBy
+    },
+    {
+        name: UserOptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT,
+        type: Number,
+        defaultValue: DefaultUserOptions.charsAmountInSingleScript
     }
 ];
 
@@ -141,6 +146,18 @@ function validateSortBy(options) {
     });
 }
 
+function validateCharsAmountInSingleScript(options) {
+    return new Promise((resolve, reject) => {
+        if (!validateHelper.isNil(options.charsAmountInSingleScript) && (!validateHelper.isNumber(options.charsAmountInSingleScript) || options.charsAmountInSingleScript < 100)) {
+            reject({message: 'Invalid Chars Amount In Single Script', charsAmountInSingleScript: options.charsAmountInSingleScript});
+            return;
+        }
+
+        resolve(options);
+    });
+}
+
+
 /**
  * Validate options (only the options that specified in the program args
  * @param options Program args options
@@ -157,6 +174,7 @@ async function validateOptions(options) {
     await validateFilePath(options).catch(addToErrorArr);
     await validatePlatform(options).catch(addToErrorArr);
     await validateSortBy(options).catch(addToErrorArr);
+    await validateCharsAmountInSingleScript(options).catch(addToErrorArr);
 
     if(errors.length > 0) {
         return Promise.reject({errors: errors});
