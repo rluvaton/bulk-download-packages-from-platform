@@ -4,8 +4,13 @@
   "description": "Bulk Download Packages From Platform",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "tsc",
+    "start": "ts-node src/index.ts --no-cache",
+    "start:node": "node src/index.js",
+    "start:prod": "node ./dist/src/index.js",
+    "start:debug": "nodemon %NODE_DEBUG_OPTION% --config nodemon-debug.json",
+    "test": "jest",
+    "jest:singleWorker": "jest --maxWorkers=1"
   },
   "author": "rluvaton",
   "license": "ISC",
@@ -17,6 +22,13 @@
     "request": "^2.88.0"
   },
   "devDependencies": {
-    "@types/prompts": "^2.0.1"
+    "@types/jest": "^24.0.18",
+    "@types/prompts": "^2.0.1",
+    "jest": "^24.9.0",
+    "nodemon": "^1.19.2",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.19.0",
+    "typescript": "^3.6.2"
   }
 }
