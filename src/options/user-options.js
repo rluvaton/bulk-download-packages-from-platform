@@ -12,13 +12,14 @@ const SortOptions = require('../common/sort-options');
  * @property {string} filePath - File path in case that `file` is chosen in `scriptHandleOptions` option
  * @property {Platforms} platform - Platform to get the packages from
  * @property {SortOptions} sortBy - at which order to get the packages (i.e get from npm the packages with the top dependents count)
+ * @property {number} charsAmountInSingleScript - The amount of characters in single script
  */
 
 // endregion
 
 /**
  * Keys of the `UserOptions`
- * @type {{PLATFORM: string, TOTAL_PACKAGES: string, SORT_BY: string, ADVANCE_OPTIONS: string, SCRIPT_HANDLE_OPTION: string, STARTING_PAGE: string, FILE_PATH: string}}
+ * @type {{PLATFORM: string, TOTAL_PACKAGES: string, CHARS_AMOUNT_IN_SINGLE_SCRIPT: string, SORT_BY: string, ADVANCE_OPTIONS: string, SCRIPT_HANDLE_OPTION: string, STARTING_PAGE: string, FILE_PATH: string}}
  */
 const OptionKeys = {
     TOTAL_PACKAGES: 'totalPackages',
@@ -27,7 +28,8 @@ const OptionKeys = {
     SCRIPT_HANDLE_OPTION: 'scriptHandleOption',
     FILE_PATH: 'filePath',
     PLATFORM: 'platform',
-    SORT_BY: 'sortBy'
+    SORT_BY: 'sortBy',
+    CHARS_AMOUNT_IN_SINGLE_SCRIPT: 'charsAmountInSingleScript'
 };
 
 const defaultOptions = {
@@ -37,7 +39,8 @@ const defaultOptions = {
     [OptionKeys.SCRIPT_HANDLE_OPTION]: ScriptHandleOptions.WRITE_TO_FILE,
     [OptionKeys.FILE_PATH]: './packages-download-script.bat',
     [OptionKeys.PLATFORM]: Platforms.NPM,
-    [OptionKeys.SORT_BY]: SortOptions.DEPENDENTS_COUNT
+    [OptionKeys.SORT_BY]: SortOptions.DEPENDENTS_COUNT,
+    [OptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT]: 2047
 };
 
 /**
@@ -90,6 +93,14 @@ function UserOptions(options, setEmptyOptionsAsDefault = true) {
      */
     this.sortBy = options.sortBy;
 
+    /**
+     * The amount of characters in single script
+     * @type {number}
+     * @default defaultOptions.charsAmountInSingleScript
+     */
+    this.charsAmountInSingleScript = options.charsAmountInSingleScript;
+
+
     if (setEmptyOptionsAsDefault) {
         this.setEmptyOptionsAsDefault();
     }
@@ -107,6 +118,7 @@ UserOptions.prototype.setEmptyOptionsAsDefault = function () {
     this.filePath = this.filePath || defaultOptions[OptionKeys.FILE_PATH];
     this.platform = this.platform || defaultOptions[OptionKeys.PLATFORM];
     this.sortBy = this.sortBy || defaultOptions[OptionKeys.SORT_BY];
+    this.charsAmountInSingleScript = this.charsAmountInSingleScript || defaultOptions[OptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT];
 };
 
 /**

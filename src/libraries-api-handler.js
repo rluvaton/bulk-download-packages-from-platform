@@ -30,55 +30,120 @@ const utils = require('./helpers/utils');
  */
 
 /**
-* @typedef {Object} LibrariesAPIHandlerOptions
-* @property {string} apiKey - Libraries API key
-*/
+ * @typedef {Object} LibrariesAPIHandlerOptions
+ * @property {string} apiKey - Libraries API key
+ */
 
 // endregion
 
 /**
  * Download script for unsupported platforms
  * @param {Array<Package>|Package[]} packages
+ * @param {number} charsAmountInSingleScript
  * @return {string} The default script for unsupported platforms
  * @private
  */
-function _downloadScriptForUnsupportedPlatforms(packages) {
+function _downloadScriptForUnsupportedPlatforms(packages, charsAmountInSingleScript) {
     return `Not Supported\n${packages.map(p => p.name).join(' ')}`
+}
+
+/**
+ * Divide script to chunks
+ * @param {Array<Package>|Package[]} packages packages
+ * @param {number} chunkSize chunk size
+ * @param {function(Package): string} getPackageStr get package string
+ * @param {number} totalScriptAdditionLen
+ * @param {number} eachItemAdditionLen
+ * @param {function(Array<string>|string[]): string} createScriptForReadyPackages
+ * @return {string} The script
+ *
+ *
+ * @example For NPM
+ *
+ * // `getPackageStr` function for npm with versions
+ * function getPackageStr(singlePackage) {
+ *     return `${singlePackage.name}@${singlePackage.latestStableReleaseNumber}`
+ * }
+ * // `totalScriptAdditionLen` will be
+ * totalScriptAdditionLen = 'npm install '.length
+ *
+ * // The `eachItemAdditionLen` will be the separator length for NPM
+ * // (For other platforms that need that for each package it will need to be like this `"${platform}" ` the length is 3 (quotes + space))
+ * eachItemAdditionLen = ' '.length
+ *
+ * function createScriptForReadyPackages(packages) {
+ *     return `npm install ${singleChunk.join(' ')}`
+ * }
+ *
+ */
+function divideScriptToChunk(packages, chunkSize, getPackageStr, totalScriptAdditionLen, eachItemAdditionLen, createScriptForReadyPackages) {
+
+    const readyPackages = packages.map(getPackageStr);
+
+    chunkSize -= totalScriptAdditionLen;
+
+    const chunksResult = utils.splitIntoChunksBasedOnCharactersCount(readyPackages, chunkSize, (item) => item, eachItemAdditionLen);
+
+    let script = '';
+
+    if (chunksResult.leftOut.length > 0) {
+        script += `This packages has left out because the chunk size is too small for them: ${chunksResult.leftOut.join(' ')}\n`;
+    }
+
+    script += chunksResult.chunks.map(createScriptForReadyPackages).join('\n');
+    return script;
+}
+
+function getPackageName(p) {
+    return p.name;
 }
 
 // noinspection JSValidateTypes
 /**
  * Functions that produce the installation script based on the platform (the key)
- * @type {{[string]: function(Array<Package>|Package[]): string}}
+ * @type {{[string]: function(Array<Package>|Package[], number): string}}
  */
 const platformsInstallScript = {
-    'npm': (packages) => `npm install ${packages.map((p) => `${p.name}@${p.latestStableReleaseNumber}`).join(' ')}`,
-    'Go': (packages) => `go get ${packages.map(p => p.name).join(' ')}`,
-    'Packagist': (packages) => `composer require ${packages.map(p => p.name).join(' ')}`,
-    'PyPI': (packages) => `pip install ${packages.map(p => p.name).join(' ')}`,
-    'NuGet': (packages) => packages.map((pck) => `Install-Package ${pck.name}`).join('\n'),
-    'Rubygems': (packages) => `gem install ${packages.map(p => p.name).join(' ')}`,
-    'Bower': (packages) => `bower install ${packages.map(p => p.name).join(' ')}`,
-    'CocoaPods': (packages) => packages.map((p) => `pod try ${p.name}`).join('\n'),
-    'Cargo': (packages) => `cargo install ${packages.map(p => p.name).join(' ')}`,
-    'CRAN': (packages) => `install.packages(c(${packages.map((p) => `"${p.name}"`).join(' ')}))`,
-    'Hackage': (packages) => `cabal install ${packages.map(p => p.name).join(' ')}`,
-    'Meteor': (packages) => `meteor add ${packages.map(p => p.name).join(' ')}`,
-    'Atom': (packages) => `apm install ${packages.map(p => p.name).join(' ')}`,
-    'PlatformIO': (packages) => packages.map((p) => `pio lib install "${p.name}"`).join('\n'),
-    'Homebrew': (packages) => `brew install ${packages.map(p => p.name).join(' ')}`,
-    'Julia': (packages) => `Pkg.add([${packages.map((p) => `"${p.name}"`).join(', ')}])`,
-    'Sublime': (packages) => `${packages.map(p => p.name).join(',')}`,
-    'Dub': (packages) => `dub fetch ${packages.map(p => p.name).join(' ')}`,
-    'Racket': (packages) => packages.map((p) => `raco pkg install ${p.name}`).join('\n'),
-    'Elm': (packages) => packages.map((p) => `elm install ${p.name}`).join('\n'),
-    'Haxelib': (packages) => packages.map((p) => `haxelib install ${p.name}`).join('\n'),
-    'Nimble': (packages) => `nimble install ${packages.map(p => p.name).join(' ')}`,
-    'Alcatraz': (packages) => `lerna add ${packages.map(p => p.name).join(' ')}`,
-    'PureScript': (packages) => packages.map((p) => `psc-package install ${p.name}`).join('\n'),
-    'Inqlude': (packages) => packages.map((p) => `inqlude install ${p.name}`).join('\n'),
 
-    // Unsupported Platforms
+    /**
+     * Platforms that **support multi package downloading** at once
+     */
+
+    'npm': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, (p) => `${p.name}@${p.latestStableReleaseNumber}`, 12, 1, (singleChunk) => `npm install ${singleChunk.join(' ')}`),
+    'Go': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 7, 1, (singleChunk) => `go get ${singleChunk.join(' ')}`),
+    'Packagist': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 17, 1, (singleChunk) => `composer require ${singleChunk.join(' ')}`),
+    'PyPI': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 12, 1, (singleChunk) => `pip install ${singleChunk.join(' ')}`),
+    'Rubygems': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 12, 1, (singleChunk) => `gem install ${singleChunk.join(' ')}`),
+    'Bower': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 14, 1, (singleChunk) => `bower install ${singleChunk.join(' ')}`),
+    'Cargo': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 14, 1, (singleChunk) => `cargo install ${singleChunk.join(' ')}`),
+    'Hackage': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 14, 1, (singleChunk) => `cabal install ${singleChunk.join(' ')}`),
+    'Meteor': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 11, 1, (singleChunk) => `meteor add ${singleChunk.join(' ')}`),
+    'Atom': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 12, 1, (singleChunk) => `apm install ${singleChunk.join(' ')}`),
+    'Homebrew': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 13, 1, (singleChunk) => `brew install ${singleChunk.join(' ')}`),
+    'Sublime': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 0, 1, (singleChunk) => `${singleChunk.join(',')}`),
+    'Dub': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 10, 1, (singleChunk) => `dub fetch ${singleChunk.join(' ')}`),
+    'Nimble': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 15, 1, (singleChunk) => `nimble install ${singleChunk.join(' ')}`),
+    'Alcatraz': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, getPackageName, 10, 1, (singleChunk) => `lerna add ${singleChunk.join(' ')}`),
+    'Julia': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, (p) => `"${p.name}"`, 11, 2, (singleChunk) => `Pkg.add([${singleChunk.join(', ')}])`),
+    'CRAN': (packages, charsAmountInSingleScript) => divideScriptToChunk(packages, charsAmountInSingleScript, (p) => `"${p.name}"`, 21, 1, (singleChunk) => `install.packages(c(${singleChunk.join(' ')}))`),
+
+    /**
+     * Platforms that need to download **one package at a time**
+     */
+
+    'NuGet': (packages, charsAmountInSingleScript) => packages.map((pck) => `Install-Package ${pck.name}`).join('\n'),
+    'PureScript': (packages, charsAmountInSingleScript) => packages.map((p) => `psc-package install ${p.name}`).join('\n'),
+    'Inqlude': (packages, charsAmountInSingleScript) => packages.map((p) => `inqlude install ${p.name}`).join('\n'),
+    'Racket': (packages, charsAmountInSingleScript) => packages.map((p) => `raco pkg install ${p.name}`).join('\n'),
+    'Elm': (packages, charsAmountInSingleScript) => packages.map((p) => `elm install ${p.name}`).join('\n'),
+    'Haxelib': (packages, charsAmountInSingleScript) => packages.map((p) => `haxelib install ${p.name}`).join('\n'),
+    'PlatformIO': (packages, charsAmountInSingleScript) => packages.map((p) => `pio lib install "${p.name}"`).join('\n'),
+    'CocoaPods': (packages, charsAmountInSingleScript) => packages.map((p) => `pod try ${p.name}`).join('\n'),
+
+    /**
+     * Unsupported Platforms
+     */
+
     'Maven': _downloadScriptForUnsupportedPlatforms,
     'WordPress': _downloadScriptForUnsupportedPlatforms,
     'CPAN': _downloadScriptForUnsupportedPlatforms,
@@ -259,10 +324,11 @@ LibrariesAPIHandler.prototype._parsePackage = function (p) {
  * Create script for downloading the libraries that fetched
  * @param {Platforms} selectedPlatform Platform that the packages data from
  * @param {Array<Package>|Package[]} packagesData
- * @return {string} download script
+ * @param {number} charsAmountInSingleScript The characters in one script
+ * @return {string} Download script
  */
-LibrariesAPIHandler.prototype.createDownloadLibraryScript = function (selectedPlatform, packagesData) {
-    return this._getDownloadScriptForPlatform(selectedPlatform)(packagesData)
+LibrariesAPIHandler.prototype.createDownloadLibraryScript = function (selectedPlatform, packagesData, charsAmountInSingleScript) {
+    return this._getDownloadScriptForPlatform(selectedPlatform)(packagesData, charsAmountInSingleScript)
 };
 
 /**

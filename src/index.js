@@ -76,7 +76,7 @@ function onFinish() {
     console.log('Starting...');
 
     librariesIoApiHandler.getPackagesInPlatform(options)
-        .then((packages) => librariesIoApiHandler.createDownloadLibraryScript(options.platform, packages))
+        .then((packages) => librariesIoApiHandler.createDownloadLibraryScript(options.platform, packages, options.charsAmountInSingleScript))
         .then(handleDownloadScript)
         .then(onFinish)
         .catch(console.error);
