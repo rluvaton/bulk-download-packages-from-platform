@@ -32,6 +32,6 @@ export class NpmPlatform extends BasePlatform {
   }
 
   getPackageStr(p: Package): string {
-    return `${p.name}@${p.latestStableReleaseNumber}`;
+    return `${p.name}` + (p.latestStableReleaseNumber ? `@${p.latestStableReleaseNumber}` : '');
   }
 }
