@@ -9,8 +9,8 @@ export class DefaultPlatform extends BasePlatform {
   readonly name: PlatformOptions = null;
   readonly supportMultiplePackagesDownloading: boolean = false;
 
-  separatorLen: number;
-  totalScriptAdditionLen: number;
+  protected separatorLen: number;
+  protected totalScriptAdditionLen: number;
 
   protected constructor() {
     super();

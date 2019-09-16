@@ -5,6 +5,7 @@ import {ScriptHandleOptions} from '../common/script-handle-options';
 import {PlatformOptions} from '../platforms/platform-options';
 import {SortOptions} from '../common/sort-options';
 import {UserOptionsValidator} from './user-options-validator';
+import {platformFactory} from '../platforms/platform-factory';
 
 const userOptionKeys = UserOptions.objectKeys;
 const defaultUserOptions = UserOptions.default;
@@ -144,8 +145,18 @@ export class UserOptionsInputGetter extends BaseUserOptionsGetter {
       message: 'Choose what is the sort parameter',
       choices: UserOptionsInputGetter._sortByChoices,
       initial: UserOptionsInputGetter._getInitialIndexFromChoicesAndName(userOptionKeys.SORT_BY, UserOptionsInputGetter._sortByChoices),
+    },
+    {
+      type: (prev, values) => UserOptionsInputGetter._shouldShowGlobalOption(values) ? 'confirm' : null,
+      name: userOptionKeys.IS_GLOBAL,
+      message: 'Should download packages globally',
+      initial: defaultUserOptions[userOptionKeys.IS_GLOBAL]
     }
   ];
+
+  private static _shouldShowGlobalOption(values): boolean {
+    return values[userOptionKeys.PLATFORM] && platformFactory(values[userOptionKeys.PLATFORM]).isGlobalSupported;
+  }
 
   /**
    * Get the index of the initial value in the choices
