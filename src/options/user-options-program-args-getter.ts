@@ -67,6 +67,11 @@ export class UserOptionsProgramArgsGetter extends BaseUserOptionsGetter {
       name: userOptionKeys.CHARS_AMOUNT_IN_SINGLE_SCRIPT,
       type: Number,
       defaultValue: defaultUserOptions.charsAmountInSingleScript
+    },
+    {
+      name: userOptionKeys.IS_GLOBAL,
+      type: Boolean,
+      defaultValue: defaultUserOptions.isGlobal
     }
   ];
 

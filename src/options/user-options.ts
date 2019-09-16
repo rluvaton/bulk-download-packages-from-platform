@@ -1,6 +1,7 @@
 import {PlatformOptions} from '../platforms/platform-options';
 import {SortOptions} from '../common/sort-options';
 import {ScriptHandleOptions} from '../common/script-handle-options';
+import {isNil} from '../helpers/validate-helper';
 
 export interface IUserOptions {
   /**
@@ -41,10 +42,15 @@ export interface IUserOptions {
 
   /**
    * The amount of characters in single script
-   * @type {number}
    * @default defaultOptions.charsAmountInSingleScript
    */
   charsAmountInSingleScript: number;
+
+  /**
+   * Should download globally (only for supported platforms)
+   * @default false
+   */
+  isGlobal: boolean;
 }
 
 export class UserOptions implements IUserOptions {
@@ -57,7 +63,8 @@ export class UserOptions implements IUserOptions {
     FILE_PATH: 'filePath',
     PLATFORM: 'platform',
     SORT_BY: 'sortBy',
-    CHARS_AMOUNT_IN_SINGLE_SCRIPT: 'charsAmountInSingleScript'
+    CHARS_AMOUNT_IN_SINGLE_SCRIPT: 'charsAmountInSingleScript',
+    IS_GLOBAL: 'isGlobal'
   };
 
   public static readonly default = new UserOptions(null);
@@ -100,10 +107,14 @@ export class UserOptions implements IUserOptions {
 
   /**
    * The amount of characters in single script
-   * @type {number}
    * @default defaultOptions.charsAmountInSingleScript
    */
   private _charsAmountInSingleScript: number;
+
+  /**
+   * @inheritDoc
+   */
+  private _isGlobal: boolean;
 
 
   constructor(options?: IUserOptions | any) {
@@ -116,6 +127,7 @@ export class UserOptions implements IUserOptions {
     this.platform = options.platform;
     this.sortBy = options.sortBy;
     this.charsAmountInSingleScript = options.charsAmountInSingleScript;
+    this.isGlobal = !isNil(options.isGlobal) ? options.isGlobal : false;
   }
 
   get totalPackages(): number {
@@ -173,6 +185,14 @@ export class UserOptions implements IUserOptions {
 
   set charsAmountInSingleScript(value: number) {
     this._charsAmountInSingleScript = value || 2047;
+  }
+
+  get isGlobal(): boolean {
+    return this._isGlobal;
+  }
+
+  set isGlobal(value: boolean) {
+    this._isGlobal = value;
   }
 
 }
