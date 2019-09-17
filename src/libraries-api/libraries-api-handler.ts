@@ -2,9 +2,10 @@ import {UserOptions} from '../options/user-options';
 import {PlatformOptions} from '../platforms/platform-options';
 import {SortOptions} from '../common/sort-options';
 import {Package} from '../common/package';
-import {defaultErrorHandling, getUTCTimestampFromDateStr, requestWithPromise, sleep} from '../helpers/utils';
+import {defaultErrorHandling, getUTCTimestampFromDateStr, requestWithProgress, requestWithPromise, sleep} from '../helpers/utils';
 import * as Observable from 'zen-observable';
 import {PackagesGetterProgressInfo} from '../common/progress/packages-getter-progress-info';
+
 import * as cloneDeep from 'lodash.clonedeep';
 
 export interface LibrariesAPIHandlerOptions {
@@ -18,6 +19,8 @@ export class LibrariesAPIHandler {
 
   private _progressChangedObservable: Observable<PackagesGetterProgressInfo>;
   private _progressChangedObserver: ZenObservable.Observer<PackagesGetterProgressInfo>;
+
+  private _progressInfo: PackagesGetterProgressInfo;
 
   constructor(options: LibrariesAPIHandlerOptions) {
     this._validateOptions(options);
@@ -70,7 +73,7 @@ export class LibrariesAPIHandler {
 
     let packagesLeft = totalPackages;
 
-    const progressInfo: PackagesGetterProgressInfo = {
+    this._progressInfo = {
       packages: {
         downloaded: 0,
         total: totalPackages
@@ -83,7 +86,7 @@ export class LibrariesAPIHandler {
     };
 
     // Cloning so the user won't be able to change the `progressInfo` values
-    this.onProgressChanged(cloneDeep(progressInfo));
+    this.onProgressChanged(cloneDeep(this._progressInfo));
 
     // Check if we can finish the packages request without requesting more requests than the rate limit (60 requests/minutes)
     // Then we won't need to sleep each request
@@ -102,10 +105,10 @@ export class LibrariesAPIHandler {
 
       packagesName = packagesName.concat(tempPagePackages);
 
-      progressInfo.pages.currentNum = page - 1;
-      progressInfo.packages.downloaded = packagesName.length;
+      this._progressInfo.pages.currentNum = page - 1;
+      this._progressInfo.packages.downloaded = packagesName.length;
 
-      this.onProgressChanged(cloneDeep(progressInfo));
+      this.onProgressChanged(cloneDeep(this._progressInfo));
 
       if (needToSleep && packagesLeft <= 0) {
         // Can request only 60 requests/minutes = request every second
@@ -136,10 +139,22 @@ export class LibrariesAPIHandler {
 
     const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, LibrariesAPIHandler._packagesPerPage);
 
-    const res = await requestWithPromise(requestOptions)
+    const res = await this.requestWithUpdate(requestOptions)
       .catch(defaultErrorHandling);
 
     return this._parsePackagesFromResponse(res);
+  }
+
+  requestWithUpdate(options: any): Promise<any> {
+    return new Promise<any>((resolve, reject) => {
+      requestWithProgress(options, true, (val) => {
+        resolve(val);
+      }).subscribe((value) => {
+        this._progressInfo.speedInBytesPerSec = value.speed;
+        // TODO - update the current value from value.percent
+        this.onProgressChanged(cloneDeep(this._progressInfo));
+      }, reject);
+    });
   }
 
 
@@ -225,6 +240,8 @@ export class LibrariesAPIHandler {
 
   private onProgressCompleted() {
     this._progressChangedObserver.complete();
+
+    this._progressInfo = null;
   }
 
   public get progressObservable(): Observable<PackagesGetterProgressInfo> {

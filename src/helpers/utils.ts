@@ -4,6 +4,8 @@ import * as request from 'request';
 import * as moment from 'moment';
 
 import {isNumber} from './validate-helper';
+import * as Observable from 'zen-observable';
+import * as progress from 'request-progress';
 
 export interface SplitIntoChunksResult<T> {
   chunks: T[][];
@@ -141,6 +143,48 @@ export function requestWithPromise(options: any, getBody: boolean = true): Promi
   });
 }
 
+export function requestWithProgress(options, getBody: boolean = true, responseCallback: (data: any) => any = (data) => {
+}): Observable<{ speed: number, percent: number }> {
+  return new Observable<{ speed: number, percent: number }>((observer) => {
+    // The options argument is optional so you can omit it
+    progress(request(options, (error, response, body) => {
+      if (error) {
+        observer.error(error);
+        return;
+      }
+
+      responseCallback(getBody ? body : response);
+    }))
+      .on('progress', (state) => {
+        // The state is an object that looks like this:
+        // {
+        //     percent: 0.5,               // Overall percent (between 0 to 1)
+        //     speed: 554732,              // The download speed in bytes/sec
+        //     size: {
+        //         total: 90044871,        // The total payload size in bytes
+        //         transferred: 27610959   // The transferred payload size in bytes
+        //     },
+        //     time: {
+        //         elapsed: 36.235,        // The total elapsed seconds since the start (3 decimals)
+        //         remaining: 81.403       // The remaining seconds to finish (3 decimals)
+        //     }
+        // }
+        observer.next({
+          percent: state.percent,
+          speed: state.speed
+        });
+      })
+      .on('error', function(err) {
+        observer.error(err);
+      })
+      .on('end', function() {
+        if (!observer.closed) {
+          observer.complete();
+        }
+      });
+  });
+}
+
 /**
  * The default error handling
  * @param err Error that raised
@@ -220,4 +264,24 @@ function validateSeparatorLen(separatorLen: number): void {
       }
     };
   }
+}
+
+export function humanFileSize(bytes: number, si: boolean = true): string {
+  const thresh = si ? 1000 : 1024;
+
+  if (Math.abs(bytes) < thresh) {
+    return bytes + ' B';
+  }
+
+  const units = si
+    ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+  let u = -1;
+
+  do {
+    bytes /= thresh;
+    ++u;
+  } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+
+  return bytes.toFixed(1) + ' ' + units[u];
 }

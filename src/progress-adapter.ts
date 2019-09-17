@@ -1,6 +1,7 @@
 import {Bar} from 'cli-progress';
 import {PackagesGetterProgressInfo} from './common/progress/packages-getter-progress-info';
 import {isNil} from './helpers/validate-helper';
+import {humanFileSize} from './helpers/utils';
 
 export class ProgressAdapter {
 
@@ -10,7 +11,7 @@ export class ProgressAdapter {
 
     // create new progress bar
     this.bar = new Bar({
-      format: 'CLI Progress | {bar} | {percentage}% || {pageValue}/{pageTotal} || {pckValue}/{pckTotal} Packages || Speed: {speed}',
+      format: 'CLI Progress | {bar} | {percentage}% || {pageValue}/{pageTotal} pages || {pckValue}/{pckTotal} Packages || Speed: {speed}',
       barCompleteChar: '\u2588',
       barIncompleteChar: '\u2591',
       hideCursor: true
@@ -47,6 +48,6 @@ export class ProgressAdapter {
    * @TODO - Add type of size (byte / MB / etc...) to convert
    */
   private prettifySize(speed: number) {
-    return (isNil(speed) || speed < 0) ? 'N/A' : `${speed}b/s`;
+    return (isNil(speed) || speed < 0) ? 'N/A' : `${humanFileSize(speed)}/s`;
   }
 }
