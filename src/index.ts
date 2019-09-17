@@ -30,6 +30,10 @@ class BulkDownloadPackagesFromPlatform {
     try {
       this._options = await getUserOptions(process.argv);
     } catch (err) {
+      if (err.name === 'help-request') {
+        return;
+      }
+
       console.error('Error in getting user options', err);
       console.error('\nExiting...');
 
@@ -59,7 +63,7 @@ class BulkDownloadPackagesFromPlatform {
 
   private _onFinish = (): void => {
     console.log('Finished!');
-  }
+  };
 
   private _printDownloadScript(script: string): void {
     console.log('The script is:');

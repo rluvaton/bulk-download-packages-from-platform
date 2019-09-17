@@ -8,6 +8,14 @@ export async function getUserOptions(programArgs): Promise<UserOptions> {
 
   let userOptionsGetter: BaseUserOptionsGetter = new UserOptionsProgramArgsGetter(programArgs);
 
+  if ((userOptionsGetter as UserOptionsProgramArgsGetter).isRequestingHelp()) {
+    (userOptionsGetter as UserOptionsProgramArgsGetter).showHelp();
+    throw {
+      name: 'help-request',
+      message: 'Requested help',
+    };
+  }
+
   if ((userOptionsGetter as UserOptionsProgramArgsGetter).isArgsContainOptions()) {
     try {
       options = await userOptionsGetter.getOptions();
