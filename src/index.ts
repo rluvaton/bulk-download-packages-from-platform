@@ -9,22 +9,24 @@ import {getUserOptions} from './options/user-options-handler';
 import {UserOptions} from './options/user-options';
 import {platformFactory} from './platforms/platform-factory';
 import {BasePlatform} from './platforms/base-platform';
+import {ProgressAdapter} from './progress-adapter';
 
 config();
 
 class BulkDownloadPackagesFromPlatform {
 
   private _options: UserOptions;
-
-  private _librariesIoApiHandler: LibrariesAPIHandler = null;
+  private _librariesIoApiHandler: LibrariesAPIHandler;
+  private _packagesProgressBar: ProgressAdapter = new ProgressAdapter();
+  private _packagesObserver: any;
 
   constructor() {
-    this.initLibrariesApiHandler();
+    this._initLibrariesApiHandler();
   }
 
   public async run() {
     if (!this._librariesIoApiHandler) {
-      this.initLibrariesApiHandler();
+      this._initLibrariesApiHandler();
     }
 
     try {
@@ -40,8 +42,25 @@ class BulkDownloadPackagesFromPlatform {
       return;
     }
 
-
     console.log('Starting...');
+
+    let isProgressStarted: boolean = false;
+
+    const progressObservable = this._librariesIoApiHandler.progressObservable;
+    this._packagesObserver = progressObservable.subscribe((progressInfo) => {
+      if (!isProgressStarted) {
+        this._packagesProgressBar.start(progressInfo);
+        return;
+      }
+
+      isProgressStarted = true;
+
+      this._packagesProgressBar.updateProgress(progressInfo);
+    }, () => {
+    }, () => {
+      this._packagesProgressBar.finishProgress();
+    });
+
     const platform: BasePlatform = platformFactory(this._options.platform);
 
     this._librariesIoApiHandler.getPackagesInPlatform(this._options)
@@ -50,9 +69,10 @@ class BulkDownloadPackagesFromPlatform {
       .then(this._onFinish)
       .catch(console.error);
 
+
   }
 
-  private initLibrariesApiHandler(): void {
+  private _initLibrariesApiHandler(): void {
     const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
     if (LIBRARIES_IO_API_KEY) {
       this._librariesIoApiHandler = new LibrariesAPIHandler({
@@ -62,6 +82,7 @@ class BulkDownloadPackagesFromPlatform {
   }
 
   private _onFinish = (): void => {
+    this._packagesObserver.unsubscribe();
     console.log('Finished!');
   };
 
@@ -102,4 +123,5 @@ class BulkDownloadPackagesFromPlatform {
 }
 
 new BulkDownloadPackagesFromPlatform().run();
+
 
