@@ -14,21 +14,27 @@
   "author": "rluvaton",
   "license": "ISC",
   "dependencies": {
+    "cli-progress": "^3.1.0",
     "command-line-args": "^5.1.1",
     "command-line-usage": "^6.0.2",
     "dotenv": "^8.1.0",
     "enum-values": "^1.2.1",
+    "lodash.clonedeep": "^4.5.0",
     "moment": "^2.24.0",
     "prompts": "^2.2.1",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "request-progress": "^3.0.0",
+    "zen-observable": "^0.8.14"
   },
   "devDependencies": {
+    "@types/cli-progress": "^1.8.1",
     "@types/command-line-usage": "^5.0.1",
     "@types/jest": "^24.0.18",
     "@types/moment": "^2.13.0",
     "@types/node": "^12.7.4",
     "@types/prompts": "^2.0.1",
     "@types/request": "^2.48.3",
+    "@types/zen-observable": "^0.8.0",
     "jest": "^24.9.0",
     "nodemon": "^1.19.2",
     "ts-jest": "^24.0.2",

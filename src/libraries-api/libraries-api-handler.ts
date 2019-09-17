@@ -2,7 +2,11 @@ import {UserOptions} from '../options/user-options';
 import {PlatformOptions} from '../platforms/platform-options';
 import {SortOptions} from '../common/sort-options';
 import {Package} from '../common/package';
-import {defaultErrorHandling, getUTCTimestampFromDateStr, requestWithPromise, sleep} from '../helpers/utils';
+import {defaultErrorHandling, getUTCTimestampFromDateStr, requestWithProgress, requestWithPromise, sleep} from '../helpers/utils';
+import * as Observable from 'zen-observable';
+import {PackagesGetterProgressInfo} from '../common/progress/packages-getter-progress-info';
+
+import * as cloneDeep from 'lodash.clonedeep';
 
 export interface LibrariesAPIHandlerOptions {
   apiKey: string;
@@ -11,12 +15,18 @@ export interface LibrariesAPIHandlerOptions {
 export class LibrariesAPIHandler {
 
   private _apiKey: string;
+  private static _packagesPerPage = 100;
 
+  private _progressChangedObservable: Observable<PackagesGetterProgressInfo>;
+  private _progressChangedObserver: ZenObservable.Observer<PackagesGetterProgressInfo>;
+
+  private _progressInfo: PackagesGetterProgressInfo;
 
   constructor(options: LibrariesAPIHandlerOptions) {
     this._validateOptions(options);
 
     this._apiKey = options.apiKey;
+    this._initObservables();
   }
 
   private _validateOptions(options: LibrariesAPIHandlerOptions): void {
@@ -33,18 +43,54 @@ export class LibrariesAPIHandler {
     }
   }
 
+  private _initObservables() {
+    this.createProgressChangeObs();
+  }
+
+  private createProgressChangeObs(): void {
+    if (this._progressChangedObserver) {
+      this._progressChangedObserver.complete();
+    }
+
+    this._progressChangedObservable = new Observable((observer) => {
+      this._progressChangedObserver = observer;
+
+      // On unsubscription, reset observer
+      return () => {
+        this._progressChangedObserver = null;
+      };
+    });
+  }
+
   async getPackagesInPlatform(options: UserOptions) {
-    let popularPackagesName = [];
+
+    let packagesName = [];
     let tempPagePackages;
 
-    const total = options.totalPackages || 0;
+    const totalPackages = options.totalPackages || 0;
     let page = options.startingPage || 1;
+    const totalPages: number = this.getTotalPages(totalPackages);
 
-    let packagesLeft = total;
+    let packagesLeft = totalPackages;
+
+    this._progressInfo = {
+      packages: {
+        downloaded: 0,
+        total: totalPackages
+      },
+      pages: {
+        currentNum: 0,
+        total: totalPages
+      },
+      speedInBytesPerSec: undefined,
+    };
+
+    // Cloning so the user won't be able to change the `progressInfo` values
+    this.onProgressChanged(cloneDeep(this._progressInfo));
 
     // Check if we can finish the packages request without requesting more requests than the rate limit (60 requests/minutes)
     // Then we won't need to sleep each request
-    const needToSleep = total > 6000;
+    const needToSleep = totalPackages > 6000;
 
     while (packagesLeft > 0) {
       tempPagePackages = await this._getPackagesInSinglePage(page, options).catch(defaultErrorHandling);
@@ -56,7 +102,13 @@ export class LibrariesAPIHandler {
       packagesLeft -= tempPagePackages.length;
       page++;
 
-      popularPackagesName = popularPackagesName.concat(tempPagePackages);
+
+      packagesName = packagesName.concat(tempPagePackages);
+
+      this._progressInfo.pages.currentNum = page - 1;
+      this._progressInfo.packages.downloaded = packagesName.length;
+
+      this.onProgressChanged(cloneDeep(this._progressInfo));
 
       if (needToSleep && packagesLeft <= 0) {
         // Can request only 60 requests/minutes = request every second
@@ -64,7 +116,16 @@ export class LibrariesAPIHandler {
       }
     }
 
-    return popularPackagesName;
+    this.onProgressCompleted();
+
+    // Recreate the observable so it would be ready for next time
+    this.createProgressChangeObs();
+
+    return packagesName;
+  }
+
+  private getTotalPages(totalPackages: number, packagesPerPage: number = LibrariesAPIHandler._packagesPerPage) {
+    return (totalPackages / packagesPerPage) + ((totalPackages % packagesPerPage) !== 0 ? 1 : 0);
   }
 
   /**
@@ -76,12 +137,24 @@ export class LibrariesAPIHandler {
    */
   private async _getPackagesInSinglePage(page: number = 1, options: UserOptions): Promise<Array<any>> {
 
-    const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, 100);
+    const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, LibrariesAPIHandler._packagesPerPage);
 
-    const res = await requestWithPromise(requestOptions)
+    const res = await this.requestWithUpdate(requestOptions)
       .catch(defaultErrorHandling);
 
     return this._parsePackagesFromResponse(res);
+  }
+
+  requestWithUpdate(options: any): Promise<any> {
+    return new Promise<any>((resolve, reject) => {
+      requestWithProgress(options, true, (val) => {
+        resolve(val);
+      }).subscribe((value) => {
+        this._progressInfo.speedInBytesPerSec = value.speed;
+        // TODO - update the current value from value.percent
+        this.onProgressChanged(cloneDeep(this._progressInfo));
+      }, reject);
+    });
   }
 
 
@@ -159,5 +232,19 @@ export class LibrariesAPIHandler {
       latestStableReleaseNumber: p.latest_stable_release_number,
       latestStableReleasePublishTimestamp: getUTCTimestampFromDateStr(p.latest_stable_release_published_at)
     };
+  }
+
+  private onProgressChanged(progressInfo: PackagesGetterProgressInfo) {
+    this._progressChangedObserver.next(progressInfo);
+  }
+
+  private onProgressCompleted() {
+    this._progressChangedObserver.complete();
+
+    this._progressInfo = null;
+  }
+
+  public get progressObservable(): Observable<PackagesGetterProgressInfo> {
+    return this._progressChangedObservable;
   }
 }
