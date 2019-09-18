@@ -51,6 +51,12 @@ export interface IUserOptions {
    * @default false
    */
   isGlobal: boolean;
+
+  /**
+   * Show progress while fetching libraries
+   * @default true
+   */
+  showProgress: boolean;
 }
 
 export class UserOptions implements IUserOptions {
@@ -64,7 +70,8 @@ export class UserOptions implements IUserOptions {
     PLATFORM: 'platform',
     SORT_BY: 'sortBy',
     CHARS_AMOUNT_IN_SINGLE_SCRIPT: 'charsAmountInSingleScript',
-    IS_GLOBAL: 'isGlobal'
+    IS_GLOBAL: 'isGlobal',
+    SHOW_PROGRESS: 'showProgress'
   };
 
   public static readonly default = new UserOptions(null);
@@ -111,10 +118,9 @@ export class UserOptions implements IUserOptions {
    */
   private _charsAmountInSingleScript: number;
 
-  /**
-   * @inheritDoc
-   */
   private _isGlobal: boolean;
+
+  private _showProgress: boolean;
 
 
   constructor(options?: IUserOptions | any) {
@@ -127,7 +133,8 @@ export class UserOptions implements IUserOptions {
     this.platform = options.platform;
     this.sortBy = options.sortBy;
     this.charsAmountInSingleScript = options.charsAmountInSingleScript;
-    this.isGlobal = !isNil(options.isGlobal) ? options.isGlobal : false;
+    this.isGlobal = options.isGlobal;
+    this.showProgress = options.showProgress;
   }
 
   get totalPackages(): number {
@@ -192,7 +199,14 @@ export class UserOptions implements IUserOptions {
   }
 
   set isGlobal(value: boolean) {
-    this._isGlobal = value;
+    this._isGlobal = !isNil(value) ? value : false;
   }
 
+  get showProgress(): boolean {
+    return this._showProgress;
+  }
+
+  set showProgress(value: boolean) {
+    this._showProgress = !isNil(value) ? value : true;
+  }
 }

@@ -84,6 +84,11 @@ export class UserOptionsProgramArgsGetter extends BaseUserOptionsGetter {
       name: userOptionKeys.IS_GLOBAL,
       type: Boolean,
       defaultValue: defaultUserOptions.isGlobal
+    },
+    {
+      name: userOptionKeys.SHOW_PROGRESS,
+      type: Boolean,
+      defaultValue: false // The default value is true but when using program args you often want to output this to file
     }
   ];
 
@@ -168,6 +173,13 @@ export class UserOptionsProgramArgsGetter extends BaseUserOptionsGetter {
       type: Boolean,
       defaultValue: defaultUserOptions.isGlobal,
       description: 'Should download globally (only for supported platforms)',
+      group: ['advance'],
+    },
+    {
+      name: userOptionKeys.SHOW_PROGRESS,
+      type: Boolean,
+      defaultValue: false, // The default value is true **but** when using program args you often want to output this to file
+      description: 'Show progress while fetching libraries',
       group: ['advance'],
     }
   ];

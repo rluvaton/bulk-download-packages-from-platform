@@ -151,6 +151,12 @@ export class UserOptionsInputGetter extends BaseUserOptionsGetter {
       name: userOptionKeys.IS_GLOBAL,
       message: 'Should download packages globally',
       initial: defaultUserOptions[userOptionKeys.IS_GLOBAL]
+    },
+    {
+      type: (prev, values) => values[userOptionKeys.ADVANCE_OPTIONS] ? 'confirm' : null,
+      name: userOptionKeys.SHOW_PROGRESS,
+      message: 'Show progress of package fetching?',
+      initial: defaultUserOptions[userOptionKeys.SHOW_PROGRESS]
     }
   ];
 

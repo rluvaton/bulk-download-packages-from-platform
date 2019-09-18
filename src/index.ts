@@ -10,6 +10,9 @@ import {UserOptions} from './options/user-options';
 import {platformFactory} from './platforms/platform-factory';
 import {BasePlatform} from './platforms/base-platform';
 import {ProgressAdapter} from './progress-adapter';
+import {Observable, Subscription} from 'rxjs';
+import {first, flatMap, tap} from 'rxjs/operators';
+import {PackagesGetterProgressInfo} from './common/progress/packages-getter-progress-info';
 
 config();
 
@@ -17,8 +20,10 @@ class BulkDownloadPackagesFromPlatform {
 
   private _options: UserOptions;
   private _librariesIoApiHandler: LibrariesAPIHandler;
+
+  private _showProgress: boolean;
   private _packagesProgressBar: ProgressAdapter = new ProgressAdapter();
-  private _packagesObserver: any;
+  private _progressPackageSubscription: Subscription;
 
   constructor() {
     this._initLibrariesApiHandler();
@@ -32,34 +37,16 @@ class BulkDownloadPackagesFromPlatform {
     try {
       this._options = await getUserOptions(process.argv);
     } catch (err) {
-      if (err.name === 'help-request') {
-        return;
-      }
-
-      console.error('Error in getting user options', err);
-      console.error('\nExiting...');
-
+      this.handleGetUserOptionError(err);
       return;
     }
 
     console.log('Starting...');
 
-    let isProgressStarted: boolean = false;
-
-    const progressObservable = this._librariesIoApiHandler.progressObservable;
-    this._packagesObserver = progressObservable.subscribe((progressInfo) => {
-      if (!isProgressStarted) {
-        this._packagesProgressBar.start(progressInfo);
-        return;
-      }
-
-      isProgressStarted = true;
-
-      this._packagesProgressBar.updateProgress(progressInfo);
-    }, () => {
-    }, () => {
-      this._packagesProgressBar.finishProgress();
-    });
+    this._showProgress = this._options.showProgress;
+    if (this._showProgress) {
+      this._startProgress();
+    }
 
     const platform: BasePlatform = platformFactory(this._options.platform);
 
@@ -72,6 +59,33 @@ class BulkDownloadPackagesFromPlatform {
 
   }
 
+  private handleGetUserOptionError(err): void {
+    if (err.name === 'help-request') {
+      return;
+    }
+
+    console.error('Error in getting user options', err);
+    console.error('\nExiting...');
+  }
+
+  private async _startProgress() {
+    const progressChangeObs: Observable<PackagesGetterProgressInfo> = this._librariesIoApiHandler.progressChangeObs;
+
+    this._progressPackageSubscription = progressChangeObs
+      .pipe(
+        // Get only the first value only to start the progress bar
+        first(),
+        tap((firstProgressInfo) => this._packagesProgressBar.start(firstProgressInfo)),
+
+        // Do this to jump over the first emitted value and do different function
+        // Do this instead of 1 subscribe and if inside so it won't check every time if it's the first value which should is faster
+        flatMap(() => progressChangeObs)
+      ).subscribe({
+        next: (progressInfo) => this._packagesProgressBar.updateProgress(progressInfo),
+        complete: () => this._packagesProgressBar.finishProgress()
+      });
+  }
+
   private _initLibrariesApiHandler(): void {
     const LIBRARIES_IO_API_KEY = process.env.LIBRARIES_IO_API_KEY;
     if (LIBRARIES_IO_API_KEY) {
@@ -82,7 +96,11 @@ class BulkDownloadPackagesFromPlatform {
   }
 
   private _onFinish = (): void => {
-    this._packagesObserver.unsubscribe();
+    if (this._showProgress) {
+      this._progressPackageSubscription.unsubscribe();
+      this._progressPackageSubscription = null;
+    }
+
     console.log('Finished!');
   };
 

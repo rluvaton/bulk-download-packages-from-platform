@@ -4,8 +4,8 @@ import * as request from 'request';
 import * as moment from 'moment';
 
 import {isNumber} from './validate-helper';
-import * as Observable from 'zen-observable';
 import * as progress from 'request-progress';
+import {Observable, Subject} from 'rxjs';
 
 export interface SplitIntoChunksResult<T> {
   chunks: T[][];
@@ -143,46 +143,49 @@ export function requestWithPromise(options: any, getBody: boolean = true): Promi
   });
 }
 
-export function requestWithProgress(options, getBody: boolean = true, responseCallback: (data: any) => any = (data) => {
-}): Observable<{ speed: number, percent: number }> {
-  return new Observable<{ speed: number, percent: number }>((observer) => {
-    // The options argument is optional so you can omit it
-    progress(request(options, (error, response, body) => {
-      if (error) {
-        observer.error(error);
-        return;
-      }
+export class ProgressInfo {
+  public speed: number;
+  public percent: number;
 
-      responseCallback(getBody ? body : response);
-    }))
-      .on('progress', (state) => {
-        // The state is an object that looks like this:
-        // {
-        //     percent: 0.5,               // Overall percent (between 0 to 1)
-        //     speed: 554732,              // The download speed in bytes/sec
-        //     size: {
-        //         total: 90044871,        // The total payload size in bytes
-        //         transferred: 27610959   // The transferred payload size in bytes
-        //     },
-        //     time: {
-        //         elapsed: 36.235,        // The total elapsed seconds since the start (3 decimals)
-        //         remaining: 81.403       // The remaining seconds to finish (3 decimals)
-        //     }
-        // }
-        observer.next({
-          percent: state.percent,
-          speed: state.speed
-        });
-      })
-      .on('error', function(err) {
-        observer.error(err);
-      })
-      .on('end', function() {
-        if (!observer.closed) {
-          observer.complete();
-        }
-      });
-  });
+  constructor(speed: number, percent: number) {
+    this.speed = speed;
+    this.percent = percent;
+  }
+}
+
+export function requestWithProgress(options, getBody: boolean = true, responseCallback: (data: ProgressInfo) => any): Observable<ProgressInfo> {
+  const progressSub: Subject<ProgressInfo> = new Subject();
+  // Maybe instead of response callback emit the value as last value
+
+  // The options argument is optional so you can omit it
+  progress(request(options, (error, response, body) => {
+    if (error) {
+      progressSub.error(error);
+      return;
+    }
+
+    responseCallback(getBody ? body : response);
+
+    progressSub.complete();
+  }))
+    .on('progress', (state) => {
+      // The state is an object that looks like this:
+      // {
+      //     percent: 0.5,               // Overall percent (between 0 to 1)
+      //     speed: 554732,              // The download speed in bytes/sec
+      //     size: {
+      //         total: 90044871,        // The total payload size in bytes
+      //         transferred: 27610959   // The transferred payload size in bytes
+      //     },
+      //     time: {
+      //         elapsed: 36.235,        // The total elapsed seconds since the start (3 decimals)
+      //         remaining: 81.403       // The remaining seconds to finish (3 decimals)
+      //     }
+      // }
+      progressSub.next(new ProgressInfo(state.speed, state.percent));
+    });
+
+  return progressSub.asObservable();
 }
 
 /**
