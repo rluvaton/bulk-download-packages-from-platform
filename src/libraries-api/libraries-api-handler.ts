@@ -2,9 +2,9 @@ import {UserOptions} from '../options/user-options';
 import {PlatformOptions} from '../platforms/platform-options';
 import {SortOptions} from '../common/sort-options';
 import {Package} from '../common/package';
-import {defaultErrorHandling, getUTCTimestampFromDateStr, requestWithProgress, requestWithPromise, sleep} from '../helpers/utils';
-import * as Observable from 'zen-observable';
+import {defaultErrorHandling, getUTCTimestampFromDateStr, ProgressInfo, requestWithProgress, sleep} from '../helpers/utils';
 import {PackagesGetterProgressInfo} from '../common/progress/packages-getter-progress-info';
+import {Observable, Subject} from 'rxjs';
 
 import * as cloneDeep from 'lodash.clonedeep';
 
@@ -17,8 +17,7 @@ export class LibrariesAPIHandler {
   private _apiKey: string;
   private static _packagesPerPage = 100;
 
-  private _progressChangedObservable: Observable<PackagesGetterProgressInfo>;
-  private _progressChangedObserver: ZenObservable.Observer<PackagesGetterProgressInfo>;
+  private _progressChangedSub: Subject<PackagesGetterProgressInfo>;
 
   private _progressInfo: PackagesGetterProgressInfo;
 
@@ -26,7 +25,7 @@ export class LibrariesAPIHandler {
     this._validateOptions(options);
 
     this._apiKey = options.apiKey;
-    this._initObservables();
+    this._initSubjects();
   }
 
   private _validateOptions(options: LibrariesAPIHandlerOptions): void {
@@ -43,23 +42,12 @@ export class LibrariesAPIHandler {
     }
   }
 
-  private _initObservables() {
-    this.createProgressChangeObs();
+  private _initSubjects() {
+    this.createProgressChangeSub();
   }
 
-  private createProgressChangeObs(): void {
-    if (this._progressChangedObserver) {
-      this._progressChangedObserver.complete();
-    }
-
-    this._progressChangedObservable = new Observable((observer) => {
-      this._progressChangedObserver = observer;
-
-      // On unsubscription, reset observer
-      return () => {
-        this._progressChangedObserver = null;
-      };
-    });
+  private createProgressChangeSub(): void {
+    this._progressChangedSub = new Subject();
   }
 
   async getPackagesInPlatform(options: UserOptions) {
@@ -119,7 +107,7 @@ export class LibrariesAPIHandler {
     this.onProgressCompleted();
 
     // Recreate the observable so it would be ready for next time
-    this.createProgressChangeObs();
+    this.createProgressChangeSub();
 
     return packagesName;
   }
@@ -136,7 +124,6 @@ export class LibrariesAPIHandler {
    * @private
    */
   private async _getPackagesInSinglePage(page: number = 1, options: UserOptions): Promise<Array<any>> {
-
     const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, LibrariesAPIHandler._packagesPerPage);
 
     const res = await this.requestWithUpdate(requestOptions)
@@ -147,15 +134,19 @@ export class LibrariesAPIHandler {
 
   requestWithUpdate(options: any): Promise<any> {
     return new Promise<any>((resolve, reject) => {
-      requestWithProgress(options, true, (val) => {
-        resolve(val);
-      }).subscribe((value) => {
-        this._progressInfo.speedInBytesPerSec = value.speed;
-        // TODO - update the current value from value.percent
-        this.onProgressChanged(cloneDeep(this._progressInfo));
-      }, reject);
+      requestWithProgress(options, true, resolve).subscribe({
+        next: this._updateProgressFromRequestProgress,
+        error: reject
+      });
     });
   }
+
+  private _updateProgressFromRequestProgress = (info: ProgressInfo) => {
+    this._progressInfo.speedInBytesPerSec = info.speed;
+
+    // TODO - update the current value from info.percent
+    this.onProgressChanged(cloneDeep(this._progressInfo));
+  };
 
 
   /**
@@ -235,16 +226,19 @@ export class LibrariesAPIHandler {
   }
 
   private onProgressChanged(progressInfo: PackagesGetterProgressInfo) {
-    this._progressChangedObserver.next(progressInfo);
+    this._progressChangedSub.next(progressInfo);
   }
 
   private onProgressCompleted() {
-    this._progressChangedObserver.complete();
+    this._progressChangedSub.complete();
+
+    // Reset ProgressBarChange
+    this.createProgressChangeSub();
 
     this._progressInfo = null;
   }
 
-  public get progressObservable(): Observable<PackagesGetterProgressInfo> {
-    return this._progressChangedObservable;
+  public get progressChangeObs(): Observable<PackagesGetterProgressInfo> {
+    return this._progressChangedSub.asObservable();
   }
 }
