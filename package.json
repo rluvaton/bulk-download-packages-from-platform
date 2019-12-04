@@ -2,22 +2,43 @@
   "name": "bulk-download-packages-from-platform",
   "version": "1.0.0",
   "description": "Bulk Download Packages From Platform",
-  "main": "src/index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "tsc",
+    "start": "ts-node --prefer-ts-exts --transpile-only src/index.ts",
+    "start:prod": "node ./dist/src/index.js",
+    "start:debug": "nodemon %NODE_DEBUG_OPTION% --config nodemon-debug.json",
+    "test": "jest",
+    "jest:singleWorker": "jest --maxWorkers=1"
   },
   "author": "rluvaton",
   "license": "ISC",
   "dependencies": {
+    "cli-progress": "^3.1.0",
     "command-line-args": "^5.1.1",
+    "command-line-usage": "^6.0.2",
     "dotenv": "^8.1.0",
+    "enum-values": "^1.2.1",
+    "lodash.clonedeep": "^4.5.0",
     "moment": "^2.24.0",
-    "package-size": "^2.3.0",
     "prompts": "^2.2.1",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "request-progress": "^3.0.0",
+    "rxjs": "^6.5.3"
   },
   "devDependencies": {
-    "@types/prompts": "^2.0.1"
+    "@types/cli-progress": "^1.8.1",
+    "@types/command-line-usage": "^5.0.1",
+    "@types/jest": "^24.0.18",
+    "@types/moment": "^2.13.0",
+    "@types/node": "^12.7.4",
+    "@types/prompts": "^2.0.1",
+    "@types/request": "^2.48.3",
+    "jest": "^24.9.0",
+    "nodemon": "^1.19.2",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.19.0",
+    "typescript": "^3.6.2"
   }
 }
