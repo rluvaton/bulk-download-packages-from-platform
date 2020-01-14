@@ -13,6 +13,7 @@ import {ProgressAdapter} from './progress-adapter';
 import {Observable, Subscription} from 'rxjs';
 import {first, flatMap, tap} from 'rxjs/operators';
 import {PackagesGetterProgressInfo} from './common/progress/packages-getter-progress-info';
+import {Package} from './common/package';
 
 config();
 
@@ -49,10 +50,24 @@ class BulkDownloadPackagesFromPlatform {
     }
 
     const platform: BasePlatform = platformFactory(this._options.platform);
+    let packages: Package[];
 
-    this._librariesIoApiHandler.getPackagesInPlatform(this._options)
-      .then((packages) => platform.createDownloadScript(packages, this._options.charsAmountInSingleScript))
-      .then(this._handleDownloadScript)
+    try {
+      packages = await this._librariesIoApiHandler.getPackagesInPlatform(this._options);
+    } catch (e) {
+      console.error('Error in getting packages', e);
+      throw e;
+    }
+
+    let script: string;
+    try {
+      script = platform.createDownloadScript(packages, this._options.charsAmountInSingleScript);
+    } catch (e) {
+      console.error('Error in creating download script', e);
+      throw e;
+    }
+
+    this._handleDownloadScript(script)
       .then(this._onFinish)
       .catch(console.error);
 

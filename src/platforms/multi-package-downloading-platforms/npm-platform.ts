@@ -4,7 +4,6 @@ import {Package} from '../../common/package';
 import {requestWithPromise} from '../../helpers/utils';
 
 export class NpmPlatform extends BasePlatform {
-  static readonly instance: NpmPlatform = new NpmPlatform();
 
   private static totalScriptAdditionLen: number = 'npm install '.length;
 
@@ -28,6 +27,9 @@ export class NpmPlatform extends BasePlatform {
    * @inheritDoc
    */
   protected _isGlobalSupported: boolean = true;
+
+  // Must be at the end of variables initialization
+  static readonly instance: NpmPlatform = new NpmPlatform();
 
   private constructor() {
     super();
