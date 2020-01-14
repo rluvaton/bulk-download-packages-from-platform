@@ -8,6 +8,7 @@ export class DefaultPlatform extends BasePlatform {
   readonly isSupported: boolean = false;
   readonly name: PlatformOptions = null;
   readonly supportMultiplePackagesDownloading: boolean = false;
+  readonly needToCheckPackagesExistence: boolean = false;
 
   protected separatorLen: number;
   protected totalScriptAdditionLen: number;

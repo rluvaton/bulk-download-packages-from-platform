@@ -11,6 +11,11 @@ export abstract class BasePlatform {
   readonly abstract isSupported: boolean;
 
   /**
+   * Is the platform support package downloading scripts?
+   */
+  readonly abstract needToCheckPackagesExistence: boolean;
+
+  /**
    * Is this platform support multiple packages download at one script?
    */
   readonly abstract supportMultiplePackagesDownloading: boolean;
@@ -38,6 +43,10 @@ export abstract class BasePlatform {
    * If changed - DON'T FORGET TO CHANGE THE `totalScriptAdditionLen` value
    */
   protected _isGlobalSupported: boolean = false;
+
+  public isPackageExist(p: Package): Promise<boolean> {
+    return Promise.resolve(true);
+  }
 
   /**
    * Create Download script for packages

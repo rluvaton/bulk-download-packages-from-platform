@@ -7,6 +7,8 @@ import {PackagesGetterProgressInfo} from '../common/progress/packages-getter-pro
 import {Observable, Subject} from 'rxjs';
 
 import * as cloneDeep from 'lodash.clonedeep';
+import {BasePlatform} from '../platforms/base-platform';
+import {platformFactory} from '../platforms/platform-factory';
 
 export interface LibrariesAPIHandlerOptions {
   apiKey: string;
@@ -123,13 +125,22 @@ export class LibrariesAPIHandler {
    * @return Packages of the wanted page
    * @private
    */
-  private async _getPackagesInSinglePage(page: number = 1, options: UserOptions): Promise<Array<any>> {
+  private async _getPackagesInSinglePage(page: number = 1, options: UserOptions): Promise<Package[]> {
     const requestOptions = this._getLibrariesRequestOptions(page, options.platform, options.sortBy, LibrariesAPIHandler._packagesPerPage);
 
-    const res = await this.requestWithUpdate(requestOptions)
-      .catch(defaultErrorHandling);
+    let res;
+    try {
+      res = await this.requestWithUpdate(requestOptions);
+    } catch (e) {
+      defaultErrorHandling(e);
+    }
 
-    return this._parsePackagesFromResponse(res);
+    let packages = this._parsePackagesFromResponse(res);
+    if (this.needToFilterPlatformPackages(options.platform)) {
+      packages = this.filterUnexistPackages(packages);
+    }
+
+    return packages;
   }
 
   requestWithUpdate(options: any): Promise<any> {
@@ -240,5 +251,18 @@ export class LibrariesAPIHandler {
 
   public get progressChangeObs(): Observable<PackagesGetterProgressInfo> {
     return this._progressChangedSub.asObservable();
+  }
+
+  private needToFilterPlatformPackages(platform: PlatformOptions): boolean {
+    return platformFactory(platform).needToCheckPackagesExistence;
+  }
+
+  private filterUnexistPackages(packages: Package[]): Package[] {
+
+    if(!packages.length) {
+      return [];
+    }
+    const platform = platformFactory(packages[0].platform);
+    platform
   }
 }

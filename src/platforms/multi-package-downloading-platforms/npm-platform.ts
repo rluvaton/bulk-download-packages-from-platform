@@ -1,6 +1,7 @@
 import {BasePlatform} from '../base-platform';
 import {PlatformOptions} from '../platform-options';
 import {Package} from '../../common/package';
+import {requestWithPromise} from '../../helpers/utils';
 
 export class NpmPlatform extends BasePlatform {
   static readonly instance: NpmPlatform = new NpmPlatform();
@@ -10,6 +11,7 @@ export class NpmPlatform extends BasePlatform {
   readonly isSupported: boolean = true;
   readonly name: PlatformOptions = PlatformOptions.NPM;
   readonly supportMultiplePackagesDownloading: boolean = true;
+  readonly needToCheckPackagesExistence: boolean = true;
 
   totalScriptAdditionLen: number = NpmPlatform.totalScriptAdditionLen;
 
@@ -45,5 +47,32 @@ export class NpmPlatform extends BasePlatform {
 
   protected getTotalScriptAdditionLen(addGlobal: boolean = false): number {
     return this.totalScriptAdditionLen + ((addGlobal) ? NpmPlatform._optionsLength.GLOBAL : 0);
+  }
+
+
+  async isPackageExist(p: Package): Promise<boolean> {
+    // https://registry.npmjs.org/react/15.0.0
+    const checkPackageUrl = `https://registry.npmjs.org/${p.name}/${p.latestStableReleaseNumber}`;
+    let res;
+    try {
+      res = await requestWithPromise({
+        method: 'GET',
+        url: checkPackageUrl,
+        qs: {},
+        headers: {
+          'cache-control': 'no-cache',
+          Connection: 'keep-alive',
+          'accept-encoding': 'gzip, deflate',
+          'Cache-Control': 'no-cache',
+          Accept: '*/*',
+        }
+      });
+      res = !res.includes('version not found');
+    } catch (e) {
+      console.log('error in res', e);
+      res = false;
+    }
+
+    return res;
   }
 }
