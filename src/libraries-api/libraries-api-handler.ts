@@ -7,7 +7,6 @@ import {PackagesGetterProgressInfo} from '../common/progress/packages-getter-pro
 import {Observable, Subject} from 'rxjs';
 
 import * as cloneDeep from 'lodash.clonedeep';
-import {BasePlatform} from '../platforms/base-platform';
 import {platformFactory} from '../platforms/platform-factory';
 
 export interface LibrariesAPIHandlerOptions {
@@ -137,7 +136,13 @@ export class LibrariesAPIHandler {
 
     let packages = this._parsePackagesFromResponse(res);
     if (this.needToFilterPlatformPackages(options.platform)) {
-      packages = this.filterUnexistPackages(packages);
+      try {
+        packages = await this.filterUnexistPackages(packages);
+      } catch (e) {
+        defaultErrorHandling(e);
+        // TODO - change this
+        packages = [];
+      }
     }
 
     return packages;
@@ -257,12 +262,14 @@ export class LibrariesAPIHandler {
     return platformFactory(platform).needToCheckPackagesExistence;
   }
 
-  private filterUnexistPackages(packages: Package[]): Package[] {
-
-    if(!packages.length) {
+  private async filterUnexistPackages(packages: Package[]): Promise<Package[]> {
+    if (!packages.length) {
       return [];
     }
     const platform = platformFactory(packages[0].platform);
-    platform
+
+    return (await Promise.all(
+      packages.map(async (p) => (await platform.isPackageExist(p)) ? p : null)
+    )).filter((p) => p);
   }
 }
