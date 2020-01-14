@@ -174,7 +174,8 @@ export class UserOptionsValidator {
 
   private _validateCharsAmountInSingleScript(options: IUserOptions): Promise<IUserOptions> {
     return new Promise((resolve, reject) => {
-      if (!isNil(options.charsAmountInSingleScript) && (!isNumber(options.charsAmountInSingleScript) || options.charsAmountInSingleScript < 100)) {
+
+      if (isNil(options.charsAmountInSingleScript) || !isNumber(options.charsAmountInSingleScript) || options.charsAmountInSingleScript < 100) {
         reject({message: 'Invalid Chars Amount In Single Script', charsAmountInSingleScript: options.charsAmountInSingleScript});
         return;
       }
