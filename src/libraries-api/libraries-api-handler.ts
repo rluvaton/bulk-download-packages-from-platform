@@ -135,13 +135,16 @@ export class LibrariesAPIHandler {
     }
 
     let packages = this._parsePackagesFromResponse(res);
+    // Set the platform so it would would be able to get the right platform instance in later use
+    packages.forEach((p) => p.platform = options.platform);
+
     if (this.needToFilterPlatformPackages(options.platform)) {
       try {
         packages = await this.filterUnexistPackages(packages);
       } catch (e) {
         defaultErrorHandling(e);
         // TODO - change this
-        packages = [];
+        // packages = packages;
       }
     }
 
@@ -266,10 +269,11 @@ export class LibrariesAPIHandler {
     if (!packages.length) {
       return [];
     }
+
     const platform = platformFactory(packages[0].platform);
 
     return (await Promise.all(
-      packages.map(async (p) => (await platform.isPackageExist(p)) ? p : null)
+      packages.map(async (p) => await platform.isPackageExist(p).catch((e) => false) ? p : undefined)
     )).filter((p) => p);
   }
 }

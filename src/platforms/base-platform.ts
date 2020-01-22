@@ -13,7 +13,7 @@ export abstract class BasePlatform {
   /**
    * Is the platform support package downloading scripts?
    */
-  readonly abstract needToCheckPackagesExistence: boolean;
+  readonly needToCheckPackagesExistence: boolean = false;
 
   /**
    * Is this platform support multiple packages download at one script?

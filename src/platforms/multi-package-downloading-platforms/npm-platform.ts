@@ -52,8 +52,8 @@ export class NpmPlatform extends BasePlatform {
   }
 
 
-  async isPackageExist(p: Package): Promise<boolean> {
-    // https://registry.npmjs.org/react/15.0.0
+  public async isPackageExist(p: Package): Promise<boolean> {
+    // (i.e https://registry.npmjs.org/react/15.0.0)
     const checkPackageUrl = `https://registry.npmjs.org/${p.name}/${p.latestStableReleaseNumber}`;
     let res;
     try {
@@ -69,6 +69,7 @@ export class NpmPlatform extends BasePlatform {
           Accept: '*/*',
         }
       });
+
       res = !res.includes('version not found');
     } catch (e) {
       console.log('error in res', e);
