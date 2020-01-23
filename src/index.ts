@@ -61,7 +61,7 @@ class BulkDownloadPackagesFromPlatform {
 
     let script: string;
     try {
-      script = platform.createDownloadScript(packages, this._options.charsAmountInSingleScript);
+      script = platform.createDownloadScript(packages, this._options.charsAmountInSingleScript, this._options.isGlobal, 'call');
     } catch (e) {
       console.error('Error in creating download script', e);
       throw e;

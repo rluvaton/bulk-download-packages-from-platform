@@ -21,6 +21,7 @@ export class LibrariesAPIHandler {
   private _progressChangedSub: Subject<PackagesGetterProgressInfo>;
 
   private _progressInfo: PackagesGetterProgressInfo;
+  private _lastTimeRequested: number = -1;
 
   constructor(options: LibrariesAPIHandlerOptions) {
     this._validateOptions(options);
@@ -99,9 +100,11 @@ export class LibrariesAPIHandler {
 
       this.onProgressChanged(cloneDeep(this._progressInfo));
 
-      if (needToSleep && packagesLeft <= 0) {
+      // Do 1000 - msPassedSinceLastRequest to save time (don't wait the full time when you don't need to)
+      const msPassedSinceLastRequest = Date.now() - this._lastTimeRequested;
+      if (needToSleep && packagesLeft <= 0 && msPassedSinceLastRequest < 1000) {
         // Can request only 60 requests/minutes = request every second
-        await sleep(1000).catch(defaultErrorHandling);
+        await sleep(1000 - msPassedSinceLastRequest).catch(defaultErrorHandling);
       }
     }
 
@@ -130,6 +133,7 @@ export class LibrariesAPIHandler {
     let res;
     try {
       res = await this.requestWithUpdate(requestOptions);
+      this._lastTimeRequested = Date.now();
     } catch (e) {
       defaultErrorHandling(e);
     }

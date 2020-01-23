@@ -53,19 +53,20 @@ export abstract class BasePlatform {
    * @param packages packages to download
    * @param charsAmountInSingleScript how much characters in single script
    * @param addGlobal Should add global (would add only if the platform support it)
+   * @param prefix
    * @return The script(s)
    */
-  createDownloadScript(packages: Package[], charsAmountInSingleScript: number, addGlobal: boolean = false): string {
+  createDownloadScript(packages: Package[], charsAmountInSingleScript: number, addGlobal: boolean = false, prefix = ''): string {
     if (!this.isSupported) {
       return this._getDownloadScriptForUnsupportedPlatforms(packages);
     }
 
     if (!this.supportMultiplePackagesDownloading) {
       // TODO - handle the case that some packages length are greater than the `charsAmountInSingleScript` value
-      return this._getScriptForSinglePackageDownload(packages, addGlobal && this._isGlobalSupported);
+      return this._getScriptForSinglePackageDownload(packages, addGlobal && this._isGlobalSupported, prefix);
     }
 
-    return BasePlatform._divideScriptToChunk(packages, charsAmountInSingleScript, addGlobal, this);
+    return BasePlatform._divideScriptToChunk(packages, charsAmountInSingleScript, addGlobal, this, prefix);
   }
 
   /**
@@ -92,12 +93,12 @@ export abstract class BasePlatform {
     return `${this.name ? `Platform ${this.name} ` : ''}Not Supported\n${packages.map(this.getPackageStr).join(' ')}`;
   }
 
-  private _getScriptForSinglePackageDownload(packages: Package[], addGlobal: boolean = false): string {
-    return packages.map((p) => this.createScriptForSinglePackage(p, addGlobal)).join('\n');
+  private _getScriptForSinglePackageDownload(packages: Package[], addGlobal: boolean = false, prefix = ''): string {
+    return packages.map((p) => this.createScriptForSinglePackage(p, addGlobal, prefix)).join('\n');
   }
 
-  protected createScriptForSinglePackage(p: Package, addGlobal: boolean = false): string {
-    return this.createScriptForSinglePackageName(this.getPackageStr(p), addGlobal);
+  protected createScriptForSinglePackage(p: Package, addGlobal: boolean = false, prefix = ''): string {
+    return (prefix || '') + this.createScriptForSinglePackageName(this.getPackageStr(p), addGlobal);
   }
 
   protected abstract createScriptForSinglePackageName(packageName: string, addGlobal?: boolean): string;
@@ -108,16 +109,18 @@ export abstract class BasePlatform {
    * @param chunkSize chunk size
    * @param addGlobal Should add global (only for supported platforms)
    * @param platform Platform to create
+   * @param prefix
    * @return The script
    */
-  private static _divideScriptToChunk(packages: Package[], chunkSize: number, addGlobal: boolean = false, platform: BasePlatform): string {
+  private static _divideScriptToChunk(packages: Package[], chunkSize: number, addGlobal: boolean = false, platform: BasePlatform, prefix = ''): string {
     addGlobal = addGlobal && platform._isGlobalSupported;
 
     const readyPackages: string[] = packages.map(platform.getPackageStr);
 
     chunkSize -= platform.getTotalScriptAdditionLen(addGlobal);
+    prefix = (prefix || '');
 
-    const chunksResult: SplitIntoChunksResult<string> = splitIntoChunksBasedOnCharsCount(readyPackages, chunkSize, (item) => item, platform.separatorLen);
+    const chunksResult: SplitIntoChunksResult<string> = splitIntoChunksBasedOnCharsCount(readyPackages, chunkSize - prefix.length, (item) => item, platform.separatorLen);
 
     let script: string = '';
 
@@ -125,7 +128,7 @@ export abstract class BasePlatform {
       script += `This packages has left out because the chunk size is too small for them: ${chunksResult.leftOut.join(' ')}\n---------------------\n`;
     }
 
-    script += chunksResult.chunks.map((chunk) => platform.createScriptFromPackages(chunk, addGlobal)).join('\n');
+    script += chunksResult.chunks.map((chunk) => prefix + platform.createScriptFromPackages(chunk, addGlobal)).join('\n');
     return script;
   }
 
