@@ -27,7 +27,7 @@
     "rxjs": "^6.5.3"
   },
   "devDependencies": {
-    "@types/cli-progress": "^1.8.1",
+    "@types/cli-progress": "^3.7.0",
     "@types/command-line-usage": "^5.0.1",
     "@types/jest": "^24.0.18",
     "@types/moment": "^2.13.0",
