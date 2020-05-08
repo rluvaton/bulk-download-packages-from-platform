@@ -20,7 +20,7 @@
     "dotenv": "^8.1.0",
     "enum-values": "^1.2.1",
     "lodash.clonedeep": "^4.5.0",
-    "moment": "^2.24.0",
+    "moment": "^2.25.3",
     "prompts": "^2.2.1",
     "request": "^2.88.2",
     "request-progress": "^3.0.0",
