@@ -35,7 +35,7 @@
     "@types/prompts": "^2.0.8",
     "@types/request": "^2.48.3",
     "jest": "^29.3.1",
-    "nodemon": "^1.19.2",
+    "nodemon": "^2.0.20",
     "ts-jest": "^29.0.3",
     "ts-node": "^8.10.1",
     "tslint": "^5.19.0",
